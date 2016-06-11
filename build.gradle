@@ -1,0 +1,131 @@
+//------------------------------------------------------
+
+apply plugin: "java"
+apply plugin: "eclipse"
+
+//------------------------------------------------------
+
+String nome = "Uxi-amarelo"
+String descricao = "Interface Web para Unha-de-gato."
+
+group = "com.joseflavio"
+archivesBaseName = "uxiamarelo"
+version = "1.0-A1"
+
+//------------------------------------------------------
+
+float javaVersao = 1.7
+String codificacao = "ISO-8859-1"
+
+sourceCompatibility = javaVersao
+compileJava.options.encoding = codificacao
+
+sourceSets {
+    main.java.srcDirs = ["fonte"]
+    main.resources.srcDirs = ["recurso"]
+}
+
+//------------------------------------------------------
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile fileTree(dir:"biblioteca", include:["*.jar"])
+    compile "com.joseflavio:unhadegato:1.0-A1"
+    compile "org.apache.tomee:javaee-api:7.0"
+    compile "org.apache.commons:commons-lang3:3.4"
+    compile "org.apache.commons:commons-io:1.3.2"
+}
+
+//------------------------------------------------------
+
+jar {
+    manifest {
+        attributes "Implementation-Title": nome,
+                   "Implementation-Version": version,
+                   "Class-Path": configurations.compile.collect{ it.getName() }.join(" ")
+    }
+}
+
+//------------------------------------------------------
+
+task warHTML(type: Copy) {
+    into "$buildDir/web"
+    from "$projectDir/web"
+}
+
+task warJava(type: Copy, dependsOn: compileJava) {
+    into "$buildDir/web/WEB-INF/classes"
+    from sourceSets.main.output.classesDir
+}
+
+task warRec(type: Copy) {
+    into "$buildDir/web/WEB-INF/classes"
+    from "$projectDir/recurso"
+}
+
+task warDep(type: Copy) {
+    into "$buildDir/web/WEB-INF/lib"
+    from configurations.runtime
+    exclude "javax.*"
+    exclude "javaee-api*"
+    exclude "validation-api*"
+    exclude "geronimo-osgi*"
+    exclude "log4j*"
+    exclude "junit*"
+    exclude "hamcrest*"
+    exclude "groovy*"
+    exclude "jython*"
+}
+
+task war(type: Zip, dependsOn: [warHTML, warJava, warRec, warDep]) {
+    archiveName = archivesBaseName + ".war"
+    destinationDir = file("$buildDir")
+    into ""
+    from "$buildDir/web"
+    includeEmptyDirs = true
+}
+
+task dist(dependsOn: [war]) {
+}
+
+build.dependsOn dist
+
+//------------------------------------------------------
+
+task tomcatRemover(type: Delete) {
+    nome = "$System.env.CATALINA_HOME/webapps/" + archivesBaseName + ".war"
+    if( file(nome).exists() ){
+        delete nome
+    }
+}
+
+task tomcat(type: Copy, dependsOn: [tomcatRemover, war]) {
+    into "$System.env.CATALINA_HOME/webapps"
+    from "$buildDir/" + archivesBaseName + ".war"
+}
+
+//------------------------------------------------------
+
+eclipse {
+    project {
+        name = archivesBaseName
+        comment = descricao
+    }
+    jdt {
+        sourceCompatibility = javaVersao
+        targetCompatibility = javaVersao
+    }
+    classpath {
+        defaultOutputDir = file("binario")
+        file {
+            beforeMerged {
+                classpath -> classpath.entries.removeAll { entry -> entry.kind == "output" }
+            }
+        }
+    }
+}
+
+//------------------------------------------------------
