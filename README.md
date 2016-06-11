@@ -8,7 +8,7 @@ Web Interface for [Unha-de-gato](http://joseflavio.com/unhadegato).
 
 1.0-A1
 
-Padrão de versionamento: [JFV](http://joseflavio.com/jfv/)
+Padrão de versionamento: [JFV](http://joseflavio.com/jfv)
 
 ## Requisitos / Requirements
 
