@@ -63,10 +63,8 @@ import javax.servlet.http.Part;
 
 import org.apache.commons.io.IOUtils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.joseflavio.unhadegato.UnhaDeGato;
+import com.joseflavio.urucum.json.JSON;
 import com.joseflavio.uxiamarelo.Configuracao;
 
 /**
@@ -101,7 +99,7 @@ public class UxiAmarelo extends HttpServlet {
 		
 		try{
 			
-			ObjectNode json = new ObjectMapper().createObjectNode();
+			JSON json = new JSON();
 			
 			Enumeration<String> parametros = requisicao.getParameterNames();
 			
@@ -140,12 +138,13 @@ public class UxiAmarelo extends HttpServlet {
 								url_contexto + "/" + url;
 					}
 					
-					Map<String,List<String>> mapa_arquivos = new HashMap<>();
+					Map<String,List<JSON>> mapa_arquivos = new HashMap<>();
 					
 					for( Part arquivo : arquivos ){
 						
 						String chave = arquivo.getName();
 						String nome = getNome( arquivo, codificacao );
+						String nome_original = nome;
 						
 						if( nome == null || nome.isEmpty() ){
 							String valor = IOUtils.toString( arquivo.getInputStream(), codificacao );
@@ -161,21 +160,24 @@ public class UxiAmarelo extends HttpServlet {
 						
 						arquivo.write( diretorioStr + File.separator + nome );
 						
-						List<String> lista = mapa_arquivos.get( chave );
+						List<JSON> lista = mapa_arquivos.get( chave );
 						if( lista == null ){
 							lista = new LinkedList<>();
 							mapa_arquivos.put( chave, lista );
 						}
 						
-						lista.add( url + "/" + nome );
+						lista.add(
+							(JSON) new JSON()
+							.put( "nome", nome_original )
+							.put( "endereco", url + "/" + nome )
+						);
 						
 					}
 					
 					for( String chave : mapa_arquivos.keySet() ){
-						List<String> lista = mapa_arquivos.get( chave );
+						List<JSON> lista = mapa_arquivos.get( chave );
 						if( lista.size() > 1 ){
-							ArrayNode array = json.putArray( chave );
-							for( String arquivo : lista ) array.add( arquivo );
+							json.put( chave, lista );
 						}else{
 							json.put( chave, lista.get( 0 ) );
 						}
@@ -210,11 +212,12 @@ public class UxiAmarelo extends HttpServlet {
 			resposta.setStatus( 500 );
 			resposta.setContentType( "application/json" );
 			
-			ObjectNode json = new ObjectMapper().createObjectNode();
-			json.put( "classe", e.getClass().getName() );
-			json.put( "mensagem", e.getMessage() );
-			
-			saida.write( json.toString() );
+			saida.write(
+				new JSON()
+				.put( "classe", e.getClass().getName() )
+				.put( "mensagem", e.getMessage() )
+				.toString()
+			);
 			
 		}
 
