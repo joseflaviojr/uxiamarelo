@@ -45,14 +45,19 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.core.*;
 import javax.ws.rs.core.Response.Status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.joseflavio.unhadegato.UnhaDeGato;
+import com.joseflavio.urucum.json.JSON;
+import com.joseflavio.urucum.texto.StringUtil;
 import com.joseflavio.uxiamarelo.Configuracao;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.Map;
 
 /**
  * @author José Flávio de Souza Dias Júnior
@@ -124,17 +129,13 @@ public class Servico {
 	@Path("{copaiba}/solicitar/{classe: [a-zA-Z][a-zA-Z0-9_$.]*}/{metodo: [a-zA-Z][a-zA-Z0-9_$]*}")
 	@Consumes({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
     public Response solicitar(
+			@Context HttpHeaders cabecalho,
     		@PathParam("copaiba") String copaiba,
     		@PathParam("classe")  String classe,
     		@PathParam("metodo")  String metodo,
     		String json
     	) {
-		try( UnhaDeGato udg = new UnhaDeGato( Configuracao.getEndereco(), Configuracao.getPorta() ) ){
-			String retorno = udg.solicitar( copaiba, classe, json, metodo );
-			return respostaOK( retorno );
-		}catch( Exception e ){
-			return respostaERRO( e );
-		}
+		return solicitar0( cabecalho, copaiba, classe, metodo, json );
     }
 	
 	/**
@@ -144,12 +145,42 @@ public class Servico {
 	@Path("{copaiba}/solicitar/{classe: [a-zA-Z][a-zA-Z0-9_$.]*}/{metodo: [a-zA-Z][a-zA-Z0-9_$]*}/{json}")
 	@Consumes({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
     public Response solicitarGet(
+			@Context HttpHeaders cabecalho,
     		@PathParam("copaiba") String copaiba,
     		@PathParam("classe")  String classe,
     		@PathParam("metodo")  String metodo,
     		@PathParam("json")    String json
     	) {
-		return solicitar( copaiba, classe, metodo, json );
+		return solicitar0( cabecalho, copaiba, classe, metodo, json );
+	}
+
+	private Response solicitar0( HttpHeaders cabecalho, String copaiba, String classe, String metodo, String json ) {
+
+		if( Configuracao.isCookieEnviar() ){
+			Map<String, Cookie> cookies = cabecalho.getCookies();
+			if( cookies.size() > 0 ){
+				JSON objeto = new JSON( json );
+				for( Cookie cookie : cookies.values() ){
+					String nome = cookie.getName();
+					if( ! objeto.has( nome ) ){
+						try{
+							objeto.put( nome, URLDecoder.decode( cookie.getValue(), "UTF-8" ) );
+						}catch( UnsupportedEncodingException e ){
+							objeto.put( nome, cookie.getValue() );
+						}
+					}
+				}
+				json = objeto.toString();
+			}
+		}
+
+		try( UnhaDeGato udg = new UnhaDeGato( Configuracao.getEndereco(), Configuracao.getPorta() ) ){
+			String retorno = udg.solicitar( copaiba, classe, json, metodo );
+			return respostaOK( retorno );
+		}catch( Exception e ){
+			return respostaERRO( e );
+		}
+
 	}
 	
 	private Response respostaOK( String retorno ) {

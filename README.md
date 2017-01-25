@@ -6,7 +6,7 @@ Web interface for [Unha-de-gato](http://joseflavio.com/unhadegato).
 
 ## Versão Atual / Current Version
 
-1.0-A4
+1.0-A5
 
 Padrão de versionamento: [JFV](http://joseflavio.com/jfv)
 
@@ -19,7 +19,7 @@ Padrão de versionamento: [JFV](http://joseflavio.com/jfv)
 
 ## Instalação / Installation
 
-[uxiamarelo.war](https://github.com/joseflaviojr/uxiamarelo/releases/download/1.0-A4/uxiamarelo.war)
+[uxiamarelo.war](https://github.com/joseflaviojr/uxiamarelo/releases/download/1.0-A5/uxiamarelo.war)
 
 ## Desenvolvimento / Development
 

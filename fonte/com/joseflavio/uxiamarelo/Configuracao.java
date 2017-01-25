@@ -39,6 +39,7 @@
 
 package com.joseflavio.uxiamarelo;
 
+import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Properties;
@@ -51,10 +52,12 @@ import com.joseflavio.uxiamarelo.rest.UxiAmarelo;
  */
 public class Configuracao {
 	
-	private static String endereco     = "localhost";
-	private static int    porta        = 8885;
-	private static String diretorio    = "uxiamarelo";
-	private static String diretorioURL = "uxiamarelo";
+	private static String  endereco     = "localhost";
+	private static int     porta        = 8885;
+	private static String  diretorio    = "uxiamarelo";
+	private static String  diretorioURL = "uxiamarelo";
+	private static String  arquivoNome  = "uuid";
+	private static boolean cookieEnviar = true;
 	
 	static {
 		try( InputStream is = UxiAmarelo.class.getResourceAsStream( "/uxiamarelo.conf" ) ){
@@ -64,6 +67,8 @@ public class Configuracao {
 			porta        = Integer.parseInt( p.getProperty( "unhadegato.porta", "8885" ) );
 			diretorio    = p.getProperty( "diretorio", "uxiamarelo" );
 			diretorioURL = p.getProperty( "diretorio.url", "uxiamarelo" );
+			arquivoNome  = p.getProperty( "arquivo.nome", "uuid" );
+			cookieEnviar = Boolean.parseBoolean( p.getProperty( "cookie.enviar", "true" ) );
 		}catch( Exception e ){
 		}
 	}
@@ -97,5 +102,19 @@ public class Configuracao {
 	public static String getDiretorioURL() {
 		return diretorioURL;
 	}
-	
+
+	/**
+	 * Padrão do {@link File#getName() nome} dos arquivos obtidos por upload: "uuid" ({@link java.util.UUID}) ou "original" (se possível).
+	 */
+	public static String getArquivoNome() {
+		return arquivoNome;
+	}
+
+	/**
+	 * Habilita o envio dos {@link javax.servlet.http.Cookie Cookies} como membros do JSON.
+	 */
+	public static boolean isCookieEnviar() {
+		return cookieEnviar;
+	}
+
 }

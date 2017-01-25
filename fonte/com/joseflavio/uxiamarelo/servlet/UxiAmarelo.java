@@ -56,16 +56,14 @@ import java.util.regex.Pattern;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.Part;
+import javax.servlet.http.*;
 
 import org.apache.commons.io.IOUtils;
 
 import com.joseflavio.unhadegato.UnhaDeGato;
 import com.joseflavio.urucum.json.JSON;
 import com.joseflavio.uxiamarelo.Configuracao;
+import org.json.JSONException;
 
 /**
  * Interface {@link HttpServlet} para {@link UnhaDeGato#solicitar(String, String, String, String)}.
@@ -109,7 +107,7 @@ public class UxiAmarelo extends HttpServlet {
 				if( chave.equals( "copaiba" ) ) copaiba = valor;
 				else json.put( chave, valor );
 			}
-			
+
 			if( tipo.contains( "multipart" ) ){
 				
 				Collection<Part> arquivos = requisicao.getParts();
@@ -143,9 +141,9 @@ public class UxiAmarelo extends HttpServlet {
 					for( Part arquivo : arquivos ){
 						
 						String chave = arquivo.getName();
-						String nome = getNome( arquivo, codificacao );
-						String nome_original = nome;
-						
+						String nome_original = getNome( arquivo, codificacao );
+						String nome = nome_original;
+
 						if( nome == null || nome.isEmpty() ){
 							String valor = IOUtils.toString( arquivo.getInputStream(), codificacao );
 							valor = URLDecoder.decode( valor, codificacao );
@@ -153,9 +151,13 @@ public class UxiAmarelo extends HttpServlet {
 							else json.put( chave, valor );
 							continue;
 						}
+
+						if( Configuracao.getArquivoNome().equals( "uuid" ) ){
+							nome = UUID.randomUUID().toString();
+						}
 						
-						if( new File( diretorioStr + File.separator + nome ).exists() ){
-							nome = UUID.randomUUID().toString() + "-" + nome;
+						while( new File( diretorioStr + File.separator + nome ).exists() ){
+							nome = UUID.randomUUID().toString();
 						}
 						
 						arquivo.write( diretorioStr + File.separator + nome );
@@ -197,7 +199,23 @@ public class UxiAmarelo extends HttpServlet {
 			if( copaibaParams.length != 3 ){
 				throw new IllegalArgumentException( "Esperado copaiba = nome@classe@metodo" );
 			}
-			
+
+			if( Configuracao.isCookieEnviar() ){
+				Cookie[] cookies = requisicao.getCookies();
+				if( cookies != null ){
+					for( Cookie cookie : cookies ){
+						String nome = cookie.getName();
+						if( ! json.has( nome ) ){
+							try{
+								json.put( nome, URLDecoder.decode( cookie.getValue(), "UTF-8" ) );
+							}catch( UnsupportedEncodingException e ){
+								json.put( nome, cookie.getValue() );
+							}
+						}
+					}
+				}
+			}
+
 			try( UnhaDeGato udg = new UnhaDeGato( Configuracao.getEndereco(), Configuracao.getPorta() ) ){
 				resultado = udg.solicitar( copaibaParams[0], copaibaParams[1], json.toString(), copaibaParams[2] );
 			}
