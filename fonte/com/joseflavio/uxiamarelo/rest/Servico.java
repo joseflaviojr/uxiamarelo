@@ -83,7 +83,7 @@ public class Servico {
     		@PathParam("linguagem") String linguagem,
     		String rotina
     	) {
-		try( UnhaDeGato udg = new UnhaDeGato( Configuracao.getEndereco(), Configuracao.getPorta() ) ){
+		try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
 			String retorno = udg.executar( copaiba, linguagem, rotina );
 			return respostaOK( retorno );
 		}catch( Exception e ){
@@ -114,7 +114,7 @@ public class Servico {
     		@PathParam("copaiba") String copaiba,
     		@PathParam("variavel") String variavel
     	) {
-		try( UnhaDeGato udg = new UnhaDeGato( Configuracao.getEndereco(), Configuracao.getPorta() ) ){
+		try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
 			String retorno = udg.obter( copaiba, variavel );
 			return respostaOK( retorno );
 		}catch( Exception e ){
@@ -174,7 +174,7 @@ public class Servico {
 			}
 		}
 
-		try( UnhaDeGato udg = new UnhaDeGato( Configuracao.getEndereco(), Configuracao.getPorta() ) ){
+		try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
 			String retorno = udg.solicitar( copaiba, classe, json, metodo );
 			return respostaOK( retorno );
 		}catch( Exception e ){

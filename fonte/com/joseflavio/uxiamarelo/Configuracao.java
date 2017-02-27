@@ -39,42 +39,47 @@
 
 package com.joseflavio.uxiamarelo;
 
+import com.joseflavio.unhadegato.UnhaDeGato;
+import com.joseflavio.uxiamarelo.rest.UxiAmarelo;
+
 import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Properties;
-
-import com.joseflavio.unhadegato.UnhaDeGato;
-import com.joseflavio.uxiamarelo.rest.UxiAmarelo;
 
 /**
  * @author José Flávio de Souza Dias Júnior
  */
 public class Configuracao {
 	
-	private static String  endereco     = "localhost";
-	private static int     porta        = 8885;
-	private static String  diretorio    = "uxiamarelo";
-	private static String  diretorioURL = "uxiamarelo";
-	private static String  arquivoNome  = "uuid";
-	private static boolean cookieEnviar = true;
+	private static String  endereco           = "localhost";
+	private static int     porta              = 8885;
+	private static boolean segura             = false;
+	private static boolean ignorarCertificado = false;
+	private static String  diretorio          = "uxiamarelo";
+	private static String  diretorioURL       = "uxiamarelo";
+	private static String  arquivoNome        = "uuid";
+	private static boolean cookieEnviar       = true;
 	
 	static {
 		try( InputStream is = UxiAmarelo.class.getResourceAsStream( "/uxiamarelo.conf" ) ){
 			Properties p = new Properties();	
 			p.load( is );
-			endereco     = p.getProperty( "unhadegato.endereco", "localhost" );
-			porta        = Integer.parseInt( p.getProperty( "unhadegato.porta", "8885" ) );
-			diretorio    = p.getProperty( "diretorio", "uxiamarelo" );
-			diretorioURL = p.getProperty( "diretorio.url", "uxiamarelo" );
-			arquivoNome  = p.getProperty( "arquivo.nome", "uuid" );
-			cookieEnviar = Boolean.parseBoolean( p.getProperty( "cookie.enviar", "true" ) );
+			endereco           = p.getProperty( "unhadegato.endereco", "localhost" );
+			porta              = Integer.parseInt( p.getProperty( "unhadegato.porta", "8885" ) );
+			segura             = Boolean.parseBoolean( p.getProperty( "unhadegato.segura", "false" ) );
+			ignorarCertificado = Boolean.parseBoolean( p.getProperty( "unhadegato.certificado.ignorar", "false" ) );
+			diretorio          = p.getProperty( "diretorio", "uxiamarelo" );
+			diretorioURL       = p.getProperty( "diretorio.url", "uxiamarelo" );
+			arquivoNome        = p.getProperty( "arquivo.nome", "uuid" );
+			cookieEnviar       = Boolean.parseBoolean( p.getProperty( "cookie.enviar", "true" ) );
 		}catch( Exception e ){
 		}
 	}
 	
 	/**
 	 * Endereço IP do {@link UnhaDeGato}.
+	 * @see UnhaDeGato#UnhaDeGato(String, int, boolean, boolean)
 	 */
 	public static String getEndereco() {
 		return endereco;
@@ -82,9 +87,31 @@ public class Configuracao {
 	
 	/**
 	 * Porta TCP do {@link UnhaDeGato}.
+	 * @see UnhaDeGato#UnhaDeGato(String, int, boolean, boolean)
 	 */
 	public static int getPorta() {
 		return porta;
+	}
+	
+	/**
+	 * @see UnhaDeGato#UnhaDeGato(String, int, boolean, boolean)
+	 */
+	public static boolean isSegura() {
+		return segura;
+	}
+	
+	/**
+	 * @see UnhaDeGato#UnhaDeGato(String, int, boolean, boolean)
+	 */
+	public static boolean isIgnorarCertificado() {
+		return ignorarCertificado;
+	}
+	
+	/**
+	 * @see UnhaDeGato#UnhaDeGato(String, int, boolean, boolean)
+	 */
+	public static UnhaDeGato getUnhaDeGato() {
+		return new UnhaDeGato( endereco, porta, segura, ignorarCertificado );
 	}
 	
 	/**

@@ -39,31 +39,23 @@
 
 package com.joseflavio.uxiamarelo.servlet;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.regex.Pattern;
+import com.joseflavio.unhadegato.UnhaDeGato;
+import com.joseflavio.urucum.json.JSON;
+import com.joseflavio.uxiamarelo.Configuracao;
+import org.apache.commons.io.IOUtils;
+import org.json.JSONTokener;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
-
-import org.apache.commons.io.IOUtils;
-
-import com.joseflavio.unhadegato.UnhaDeGato;
-import com.joseflavio.urucum.json.JSON;
-import com.joseflavio.uxiamarelo.Configuracao;
-import org.json.JSONException;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Interface {@link HttpServlet} para {@link UnhaDeGato#solicitar(String, String, String, String)}.
@@ -114,18 +106,22 @@ public class UxiAmarelo extends HttpServlet {
 				
 				if( ! arquivos.isEmpty() ){
 					
-					String diretorioStr = Configuracao.getDiretorio();
-					if( ! diretorioStr.startsWith( File.separator ) ){
-						diretorioStr =
-								requisicao.getServletContext().getRealPath("") +
-								File.separator +
-								diretorioStr;
+					File diretorio = new File( Configuracao.getDiretorio() );
+					
+					if( ! diretorio.isAbsolute() ){
+						diretorio = new File(
+							requisicao.getServletContext().getRealPath("") +
+							File.separator +
+							Configuracao.getDiretorio()
+						);
 					}
 					
-					File diretorio = new File( diretorioStr );
 					if( ! diretorio.exists() ) diretorio.mkdirs();
 					
+					String diretorioStr = diretorio.getAbsolutePath();
+					
 					String url = Configuracao.getDiretorioURL();
+					
 					if( ! padrao_url.matcher( url ).matches() ){
 						String url_esquema  = requisicao.getScheme();
 						String url_servidor = requisicao.getServerName();
@@ -134,6 +130,10 @@ public class UxiAmarelo extends HttpServlet {
 						url =
 								url_esquema + "://" + url_servidor + ":" + url_porta +
 								url_contexto + "/" + url;
+					}
+					
+					if( url.charAt( url.length() - 1 ) == '/' ){
+						url = url.substring( 0, url.length() - 1 );
 					}
 					
 					Map<String,List<JSON>> mapa_arquivos = new HashMap<>();
@@ -190,14 +190,14 @@ public class UxiAmarelo extends HttpServlet {
 			}
 			
 			if( copaiba == null || copaiba.isEmpty() ){
-				throw new IllegalArgumentException( "Esperado copaiba = nome@classe@metodo" );
+				throw new IllegalArgumentException( "copaiba = nome@classe@metodo" );
 			}
 
 			String resultado = "";
 			String[] copaibaParams = copaiba.split( "@" );
 			
 			if( copaibaParams.length != 3 ){
-				throw new IllegalArgumentException( "Esperado copaiba = nome@classe@metodo" );
+				throw new IllegalArgumentException( "copaiba = nome@classe@metodo" );
 			}
 
 			if( Configuracao.isCookieEnviar() ){
@@ -216,18 +216,44 @@ public class UxiAmarelo extends HttpServlet {
 				}
 			}
 
-			try( UnhaDeGato udg = new UnhaDeGato( Configuracao.getEndereco(), Configuracao.getPorta() ) ){
+			try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
 				resultado = udg.solicitar( copaibaParams[0], copaibaParams[1], json.toString(), copaibaParams[2] );
 			}
 			
-			resposta.setStatus( 200 );
-			resposta.setContentType( "application/json" );
+			if( resultado == null ) resultado = "";
 			
-			saida.write( resultado );
+			String comando = json.optString( "uxicmd", null );
+			
+			if( comando == null ){
+				
+				resposta.setStatus( HttpServletResponse.SC_OK );
+				resposta.setContentType( "application/json" );
+				
+				saida.write( resultado );
+				
+			}else if( comando.equals( "redirecionar" ) ){
+				
+				resposta.sendRedirect(
+					new JSONTokener( resultado ).nextValue().toString()
+				);
+				
+			}else if( comando.startsWith( "redirecionar.json." ) ){
+				
+				resposta.sendRedirect(
+					new JSON( resultado ).getString(
+						comando.substring( "redirecionar.json.".length() )
+					)
+				);
+				
+			}else{
+				
+				throw new IllegalArgumentException( comando );
+				
+			}
 			
 		}catch( Exception e ){
 			
-			resposta.setStatus( 500 );
+			resposta.setStatus( HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
 			resposta.setContentType( "application/json" );
 			
 			saida.write(
