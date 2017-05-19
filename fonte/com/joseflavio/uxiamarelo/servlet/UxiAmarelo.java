@@ -49,10 +49,9 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -224,26 +223,45 @@ public class UxiAmarelo extends HttpServlet {
 			
 			String comando = json.optString( "uxicmd", null );
 			
-			if( comando == null ){
+			if( comando == null || comando.length() == 0 ){
 				
 				resposta.setStatus( HttpServletResponse.SC_OK );
 				resposta.setContentType( "application/json" );
 				
 				saida.write( resultado );
 				
-			}else if( comando.equals( "redirecionar" ) ){
+			}else if( comando.startsWith( "redirecionar" ) ){
 				
-				resposta.sendRedirect(
-					new JSONTokener( resultado ).nextValue().toString()
-				);
+				resposta.sendRedirect( toString( "redirecionar", comando, resultado ) );
 				
-			}else if( comando.startsWith( "redirecionar.json." ) ){
+			}else if( comando.startsWith( "base64" ) ){
 				
-				resposta.sendRedirect(
-					new JSON( resultado ).getString(
-						comando.substring( "redirecionar.json.".length() )
-					)
-				);
+				String url = comando.substring( "base64.".length() );
+				
+				resposta.sendRedirect( url + Base64.getUrlEncoder().encodeToString( resultado.getBytes( "UTF-8" ) ) );
+				
+			}else if( comando.startsWith( "html_url" ) ){
+				
+				HttpURLConnection con = (HttpURLConnection) new URL( toString( "html_url", comando, resultado ) ).openConnection();
+				con.setRequestProperty( "User-Agent", "Uxi-amarelo" );
+				
+				if( con.getResponseCode() != HttpServletResponse.SC_OK ) throw new IOException( "HTTP = " + con.getResponseCode() );
+				
+				resposta.setStatus( HttpServletResponse.SC_OK );
+				resposta.setContentType( "text/html" );
+				
+				try( InputStream is = con.getInputStream() ){
+					saida.write( IOUtils.toString( is ) );
+				}
+				
+				con.disconnect();
+				
+			}else if( comando.startsWith( "html" ) ){
+				
+				resposta.setStatus( HttpServletResponse.SC_OK );
+				resposta.setContentType( "text/html" );
+				
+				saida.write( toString( "html", comando, resultado ) );
 				
 			}else{
 				
@@ -296,6 +314,13 @@ public class UxiAmarelo extends HttpServlet {
 			}
 		}
 		return nome;
+	}
+	
+	private static String toString( String prefixo, String comando, String resultado ) {
+		String str = prefixo + ".json.";
+		String atributo = comando.startsWith( str ) ? comando.substring( str.length() ) : null;
+		if( atributo != null ) return new JSON( resultado ).getString( atributo );
+		else return new JSONTokener( resultado ).nextValue().toString();
 	}
 	
 }
