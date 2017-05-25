@@ -1,15 +1,25 @@
 
-# Geral
-.DS_Store
-.DS_Store?
-.Spotlight-V100
+# .gitignore 2017-05-25
+
+# Sistema Operacional
+.DS_Store*
+.Spotlight*
 .Trashes
 ehthumbs.db
 Thumbs.db
+*.so
+*.dylib
+*.dll
+*.lai
+*.la
+*.a
+*.lib
+*.exe
+*.out
+*.app
 
-# Local
-projeto/
-proj/
+# Geral
+rascunho/
 
 # Java
 *.class
@@ -40,6 +50,17 @@ out/
 # SASS
 .sass-cache/
 *.css.map
+
+# C/C++
+*.slo
+*.lo
+*.o
+*.obj
+*.gch
+*.pch
+
+# Fortran
+*.mod
 
 # Logs
 *.log
