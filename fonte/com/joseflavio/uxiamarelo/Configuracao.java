@@ -40,41 +40,79 @@
 package com.joseflavio.uxiamarelo;
 
 import com.joseflavio.unhadegato.UnhaDeGato;
+import com.joseflavio.urucum.json.JSON;
 import com.joseflavio.uxiamarelo.rest.UxiAmarelo;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * @author José Flávio de Souza Dias Júnior
  */
 public class Configuracao {
 	
-	private static String  endereco           = "localhost";
-	private static int     porta              = 8885;
-	private static boolean segura             = false;
-	private static boolean ignorarCertificado = false;
-	private static String  diretorio          = "uxiamarelo";
-	private static String  diretorioURL       = "uxiamarelo";
-	private static String  arquivoNome        = "uuid";
-	private static boolean cookieEnviar       = true;
+	private static String  endereco                 = "localhost";
+	private static int     porta                    = 8885;
+	private static boolean segura                   = false;
+	private static boolean ignorarCertificado       = false;
+	private static String  diretorio                = "uxiamarelo";
+	private static String  diretorioURL             = "uxiamarelo";
+	private static String  arquivoNome              = "uuid";
+	private static boolean cookieEnviar             = true;
+	private static String  cookieBloquear           = "sid, sessaoid, sessionid";
+	private static boolean encapsulamentoAutomatico = true;
+	private static String  encapsulamentoSeparador  = "__";
+    
+    private static Set<String> cookiesBloqueados;
 	
 	static {
-		try( InputStream is = UxiAmarelo.class.getResourceAsStream( "/uxiamarelo.conf" ) ){
-			Properties p = new Properties();	
-			p.load( is );
-			endereco           = p.getProperty( "unhadegato.endereco", "localhost" );
-			porta              = Integer.parseInt( p.getProperty( "unhadegato.porta", "8885" ) );
-			segura             = Boolean.parseBoolean( p.getProperty( "unhadegato.segura", "false" ) );
-			ignorarCertificado = Boolean.parseBoolean( p.getProperty( "unhadegato.certificado.ignorar", "false" ) );
-			diretorio          = p.getProperty( "diretorio", "uxiamarelo" );
-			diretorioURL       = p.getProperty( "diretorio.url", "uxiamarelo" );
-			arquivoNome        = p.getProperty( "arquivo.nome", "uuid" );
-			cookieEnviar       = Boolean.parseBoolean( p.getProperty( "cookie.enviar", "true" ) );
+	    
+		try{
+			
+		    String dir  = System.getenv( "UXIAMARELO" );
+			File   conf = dir != null ? new File( dir, "uxiamarelo.conf" ) : null;
+			
+			if( conf != null && conf.exists() ){
+				try( InputStream is = new FileInputStream( conf ) ){
+					carregar( is );
+				}
+			}else{
+				try( InputStream is = UxiAmarelo.class.getResourceAsStream( "/uxiamarelo.conf" ) ){
+					carregar( is );
+				}
+			}
+			
 		}catch( Exception e ){
+			e.printStackTrace();
 		}
+		
+	}
+	
+	private static void carregar( InputStream is ) throws IOException {
+		
+		Properties p = new Properties();
+		p.load( is );
+		
+		endereco = p.getProperty( "unhadegato.endereco", "localhost" );
+		porta = Integer.parseInt( p.getProperty( "unhadegato.porta", "8885" ) );
+		segura = Boolean.parseBoolean( p.getProperty( "unhadegato.segura", "false" ) );
+		ignorarCertificado = Boolean.parseBoolean( p.getProperty( "unhadegato.certificado.ignorar", "false" ) );
+		diretorio = p.getProperty( "diretorio", "uxiamarelo" );
+		diretorioURL = p.getProperty( "diretorio.url", "uxiamarelo" );
+		arquivoNome = p.getProperty( "arquivo.nome", "uuid" );
+		cookieEnviar = Boolean.parseBoolean( p.getProperty( "cookie.enviar", "true" ) );
+		cookieBloquear = p.getProperty( "cookie.bloquear", "sid, sessaoid, sessionid" );
+		encapsulamentoAutomatico = Boolean.parseBoolean( p.getProperty( "encapsulamento.automatico", "true" ) );
+		encapsulamentoSeparador = p.getProperty( "encapsulamento.separador", "__" );
+		
 	}
 	
 	/**
@@ -138,10 +176,41 @@ public class Configuracao {
 	}
 
 	/**
-	 * Habilita o envio dos {@link javax.servlet.http.Cookie Cookies} como membros do JSON.
+	 * Habilita o envio dos {@link javax.servlet.http.Cookie Cookies} como membros do {@link JSON}.
 	 */
 	public static boolean isCookieEnviar() {
 		return cookieEnviar;
 	}
-
+    
+    /**
+     * {@link javax.servlet.http.Cookie Cookies} que não devem ser enviados como membros do {@link JSON}.
+     */
+    public static String getCookieBloquear() {
+        return cookieBloquear;
+    }
+    
+    /**
+	 * Habilita o autoencapsulamento de valores em {@link JSONObject objetos} e {@link JSONArray arrays}.
+	 */
+	public static boolean isEncapsulamentoAutomatico() {
+		return encapsulamentoAutomatico;
+	}
+	
+	/**
+	 * Separador de endereçamento de objetos no encapsulamento.
+	 */
+	public static String getEncapsulamentoSeparador() {
+		return encapsulamentoSeparador;
+	}
+    
+    public static boolean cookieBloqueado( String nome ) {
+	    if( cookiesBloqueados == null ){
+            cookiesBloqueados = new HashSet<>();
+	        for( String s : cookieBloquear.split( "," ) ){
+                cookiesBloqueados.add( s.trim() );
+            }
+        }
+        return cookiesBloqueados.contains( nome );
+    }
+    
 }

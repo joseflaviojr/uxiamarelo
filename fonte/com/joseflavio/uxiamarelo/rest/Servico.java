@@ -39,24 +39,26 @@
 
 package com.joseflavio.uxiamarelo.rest;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.*;
-import javax.ws.rs.core.Response.Status;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.joseflavio.unhadegato.UnhaDeGato;
 import com.joseflavio.urucum.json.JSON;
-import com.joseflavio.urucum.texto.StringUtil;
 import com.joseflavio.uxiamarelo.Configuracao;
+import com.joseflavio.uxiamarelo.util.Util;
+import org.apache.commons.io.IOUtils;
 
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.*;
+import javax.ws.rs.core.*;
+import javax.ws.rs.core.Response.Status;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
 import java.net.URLDecoder;
+import java.util.Base64;
 import java.util.Map;
 
 /**
@@ -84,8 +86,8 @@ public class Servico {
     		String rotina
     	) {
 		try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
-			String retorno = udg.executar( copaiba, linguagem, rotina );
-			return respostaOK( retorno );
+			String resultado = udg.executar( copaiba, linguagem, rotina );
+			return respostaOK( resultado );
 		}catch( Exception e ){
 			return respostaERRO( e );
 		}
@@ -115,8 +117,8 @@ public class Servico {
     		@PathParam("variavel") String variavel
     	) {
 		try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
-			String retorno = udg.obter( copaiba, variavel );
-			return respostaOK( retorno );
+			String resultado = udg.obter( copaiba, variavel );
+			return respostaOK( resultado );
 		}catch( Exception e ){
 			return respostaERRO( e );
 		}
@@ -130,12 +132,13 @@ public class Servico {
 	@Consumes({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
     public Response solicitar(
 			@Context HttpHeaders cabecalho,
+			@QueryParam("uxicmd") String comando,
     		@PathParam("copaiba") String copaiba,
     		@PathParam("classe")  String classe,
     		@PathParam("metodo")  String metodo,
     		String json
     	) {
-		return solicitar0( cabecalho, copaiba, classe, metodo, json );
+		return solicitar0( cabecalho, comando, copaiba, classe, metodo, json );
     }
 	
 	/**
@@ -146,49 +149,122 @@ public class Servico {
 	@Consumes({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
     public Response solicitarGet(
 			@Context HttpHeaders cabecalho,
+			@QueryParam("uxicmd") String comando,
     		@PathParam("copaiba") String copaiba,
     		@PathParam("classe")  String classe,
     		@PathParam("metodo")  String metodo,
     		@PathParam("json")    String json
     	) {
-		return solicitar0( cabecalho, copaiba, classe, metodo, json );
+		return solicitar0( cabecalho, comando, copaiba, classe, metodo, json );
 	}
 
-	private Response solicitar0( HttpHeaders cabecalho, String copaiba, String classe, String metodo, String json ) {
-
-		if( Configuracao.isCookieEnviar() ){
-			Map<String, Cookie> cookies = cabecalho.getCookies();
-			if( cookies.size() > 0 ){
-				JSON objeto = new JSON( json );
-				for( Cookie cookie : cookies.values() ){
-					String nome = cookie.getName();
-					if( ! objeto.has( nome ) ){
-						try{
-							objeto.put( nome, URLDecoder.decode( cookie.getValue(), "UTF-8" ) );
-						}catch( UnsupportedEncodingException e ){
-							objeto.put( nome, cookie.getValue() );
+	private Response solicitar0( HttpHeaders cabecalho, String comando, String copaiba, String classe, String metodo, String json ) {
+		
+		try{
+		
+			JSON objeto = null;
+			
+			if( Configuracao.isCookieEnviar() ){
+				Map<String, Cookie> cookies = cabecalho.getCookies();
+				if( cookies.size() > 0 ){
+					if( objeto == null ) objeto = new JSON( json );
+					for( Cookie cookie : cookies.values() ){
+						String nome = cookie.getName();
+						if( Configuracao.cookieBloqueado( nome ) ) continue;
+						if( ! objeto.has( nome ) ){
+							try{
+								objeto.put( nome, URLDecoder.decode( cookie.getValue(), "UTF-8" ) );
+							}catch( UnsupportedEncodingException e ){
+								objeto.put( nome, cookie.getValue() );
+							}
 						}
 					}
 				}
-				json = objeto.toString();
 			}
-		}
+			
+			if( Configuracao.isEncapsulamentoAutomatico() ){
+				if( objeto == null ) objeto = new JSON( json );
+				String separador = Configuracao.getEncapsulamentoSeparador();
+				for( String chave : objeto.keySet().toArray( new String[0] ) ){
+					String[] caminho = chave.split( separador );
+					if( caminho.length > 1 ){
+						Util.encapsular( caminho, objeto.remove( chave ), objeto );
+					}
+				}
+			}
+			
+			if( objeto != null ) json = objeto.toString();
+			
+			String resultado = "";
+			try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
+				resultado = udg.solicitar( copaiba, classe, json, metodo );
+				if( resultado == null ) resultado = "";
+			}
+			
+			if( comando == null ){
+				
+				return respostaOK( resultado );
+				
+			}else if( comando.startsWith( "redirecionar" ) ){
+				
+				return Response
+					.temporaryRedirect( new URI( Util.obterStringDeJSON( "redirecionar", comando, resultado ) ) )
+					.build();
 
-		try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
-			String retorno = udg.solicitar( copaiba, classe, json, metodo );
-			return respostaOK( retorno );
+			}else if( comando.startsWith( "base64" ) ){
+				
+				String url = comando.substring( "base64.".length() );
+				
+				return Response
+					.temporaryRedirect( new URI( url + Base64.getUrlEncoder().encodeToString( resultado.getBytes( "UTF-8" ) ) ) )
+					.build();
+				
+			}else if( comando.startsWith( "html_url" ) ){
+				
+				HttpURLConnection con = (HttpURLConnection) new URL( Util.obterStringDeJSON( "html_url", comando, resultado ) ).openConnection();
+				con.setRequestProperty( "User-Agent", "Uxi-amarelo" );
+				
+				if( con.getResponseCode() != HttpServletResponse.SC_OK ) throw new IOException( "HTTP = " + con.getResponseCode() );
+				
+				String conteudo = null;
+				try( InputStream is = con.getInputStream() ){
+					conteudo = IOUtils.toString( is );
+				}
+				
+				con.disconnect();
+				
+				return Response
+					.status( Status.OK )
+					.type( MediaType.TEXT_HTML + "; charset=UTF-8" )
+					.entity( conteudo )
+					.build();
+				
+			}else if( comando.startsWith( "html" ) ){
+				
+				return Response
+					.status( Status.OK )
+					.type( MediaType.TEXT_HTML + "; charset=UTF-8" )
+					.entity( Util.obterStringDeJSON( "html", comando, resultado ) )
+					.build();
+				
+			}else{
+				
+				throw new IllegalArgumentException( comando );
+				
+			}
+			
 		}catch( Exception e ){
 			return respostaERRO( e );
 		}
-
+		
 	}
 	
-	private Response respostaOK( String retorno ) {
+	private Response respostaOK( String resultado ) {
 		return Response
-		.status( Status.OK )
-		.type( MediaType.APPLICATION_JSON + "; charset=UTF-8" )
-		.entity( retorno )
-		.build();
+			.status( Status.OK )
+			.type( MediaType.APPLICATION_JSON + "; charset=UTF-8" )
+			.entity( resultado )
+			.build();
 	}
 	
 	private Response respostaERRO( Throwable e ) {
@@ -198,11 +274,11 @@ public class Servico {
 		json.put( "mensagem", e.getMessage() );
 		
 		return Response
-		.status( Status.INTERNAL_SERVER_ERROR )
-		.type( MediaType.APPLICATION_JSON + "; charset=UTF-8" )
-		.entity( json.toString() )
-		.build();
+			.status( Status.INTERNAL_SERVER_ERROR )
+			.type( MediaType.APPLICATION_JSON + "; charset=UTF-8" )
+			.entity( json.toString() )
+			.build();
 		
 	}
-
+	
 }

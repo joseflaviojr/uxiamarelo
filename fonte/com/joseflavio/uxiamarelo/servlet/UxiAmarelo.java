@@ -41,9 +41,10 @@ package com.joseflavio.uxiamarelo.servlet;
 
 import com.joseflavio.unhadegato.UnhaDeGato;
 import com.joseflavio.urucum.json.JSON;
+import com.joseflavio.urucum.texto.StringUtil;
 import com.joseflavio.uxiamarelo.Configuracao;
+import com.joseflavio.uxiamarelo.util.Util;
 import org.apache.commons.io.IOUtils;
-import org.json.JSONTokener;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
@@ -84,8 +85,6 @@ public class UxiAmarelo extends HttpServlet {
         resposta.setCharacterEncoding( codificacao );
         PrintWriter saida = resposta.getWriter();
         
-        String copaiba = null;
-		
 		try{
 			
 			JSON json = new JSON();
@@ -95,8 +94,7 @@ public class UxiAmarelo extends HttpServlet {
 			while( parametros.hasMoreElements() ){
 				String chave = parametros.nextElement();
 				String valor = URLDecoder.decode( requisicao.getParameter( chave ), codificacao );
-				if( chave.equals( "copaiba" ) ) copaiba = valor;
-				else json.put( chave, valor );
+				json.put( chave, valor );
 			}
 
 			if( tipo.contains( "multipart" ) ){
@@ -146,8 +144,7 @@ public class UxiAmarelo extends HttpServlet {
 						if( nome == null || nome.isEmpty() ){
 							String valor = IOUtils.toString( arquivo.getInputStream(), codificacao );
 							valor = URLDecoder.decode( valor, codificacao );
-							if( chave.equals( "copaiba" ) ) copaiba = valor;
-							else json.put( chave, valor );
+							json.put( chave, valor );
 							continue;
 						}
 
@@ -188,22 +185,25 @@ public class UxiAmarelo extends HttpServlet {
 				
 			}
 			
-			if( copaiba == null || copaiba.isEmpty() ){
+			String copaiba = (String) json.remove( "copaiba" );
+			if( StringUtil.tamanho( copaiba ) == 0 ){
 				throw new IllegalArgumentException( "copaiba = nome@classe@metodo" );
 			}
 
-			String resultado = "";
-			String[] copaibaParams = copaiba.split( "@" );
-			
-			if( copaibaParams.length != 3 ){
+			String[] copaibaParam = copaiba.split( "@" );
+			if( copaibaParam.length != 3 ){
 				throw new IllegalArgumentException( "copaiba = nome@classe@metodo" );
 			}
+			
+			String comando = (String) json.remove( "uxicmd" );
+			if( StringUtil.tamanho( comando ) == 0 ) comando = null;
 
 			if( Configuracao.isCookieEnviar() ){
 				Cookie[] cookies = requisicao.getCookies();
 				if( cookies != null ){
 					for( Cookie cookie : cookies ){
 						String nome = cookie.getName();
+						if( Configuracao.cookieBloqueado( nome ) ) continue;
 						if( ! json.has( nome ) ){
 							try{
 								json.put( nome, URLDecoder.decode( cookie.getValue(), "UTF-8" ) );
@@ -214,16 +214,24 @@ public class UxiAmarelo extends HttpServlet {
 					}
 				}
 			}
-
-			try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
-				resultado = udg.solicitar( copaibaParams[0], copaibaParams[1], json.toString(), copaibaParams[2] );
+			
+			if( Configuracao.isEncapsulamentoAutomatico() ){
+				String separador = Configuracao.getEncapsulamentoSeparador();
+				for( String chave : json.keySet().toArray( new String[0] ) ){
+					String[] caminho = chave.split( separador );
+					if( caminho.length > 1 ){
+						Util.encapsular( caminho, json.remove( chave ), json );
+					}
+				}
 			}
 			
-			if( resultado == null ) resultado = "";
+			String resultado = "";
+			try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
+				resultado = udg.solicitar( copaibaParam[0], copaibaParam[1], json.toString(), copaibaParam[2] );
+                if( resultado == null ) resultado = "";
+			}
 			
-			String comando = json.optString( "uxicmd", null );
-			
-			if( comando == null || comando.length() == 0 ){
+			if( comando == null ){
 				
 				resposta.setStatus( HttpServletResponse.SC_OK );
 				resposta.setContentType( "application/json" );
@@ -232,7 +240,7 @@ public class UxiAmarelo extends HttpServlet {
 				
 			}else if( comando.startsWith( "redirecionar" ) ){
 				
-				resposta.sendRedirect( toString( "redirecionar", comando, resultado ) );
+				resposta.sendRedirect( Util.obterStringDeJSON( "redirecionar", comando, resultado ) );
 				
 			}else if( comando.startsWith( "base64" ) ){
 				
@@ -242,7 +250,7 @@ public class UxiAmarelo extends HttpServlet {
 				
 			}else if( comando.startsWith( "html_url" ) ){
 				
-				HttpURLConnection con = (HttpURLConnection) new URL( toString( "html_url", comando, resultado ) ).openConnection();
+				HttpURLConnection con = (HttpURLConnection) new URL( Util.obterStringDeJSON( "html_url", comando, resultado ) ).openConnection();
 				con.setRequestProperty( "User-Agent", "Uxi-amarelo" );
 				
 				if( con.getResponseCode() != HttpServletResponse.SC_OK ) throw new IOException( "HTTP = " + con.getResponseCode() );
@@ -261,7 +269,7 @@ public class UxiAmarelo extends HttpServlet {
 				resposta.setStatus( HttpServletResponse.SC_OK );
 				resposta.setContentType( "text/html" );
 				
-				saida.write( toString( "html", comando, resultado ) );
+				saida.write( Util.obterStringDeJSON( "html", comando, resultado ) );
 				
 			}else{
 				
@@ -314,13 +322,6 @@ public class UxiAmarelo extends HttpServlet {
 			}
 		}
 		return nome;
-	}
-	
-	private static String toString( String prefixo, String comando, String resultado ) {
-		String str = prefixo + ".json.";
-		String atributo = comando.startsWith( str ) ? comando.substring( str.length() ) : null;
-		if( atributo != null ) return new JSON( resultado ).getString( atributo );
-		else return new JSONTokener( resultado ).nextValue().toString();
 	}
 	
 }
