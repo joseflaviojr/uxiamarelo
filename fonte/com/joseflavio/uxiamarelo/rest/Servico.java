@@ -1,8 +1,8 @@
 
 /*
- *  Copyright (C) 2016 José Flávio de Souza Dias Júnior
+ *  Copyright (C) 2016-2018 José Flávio de Souza Dias Júnior
  *  
- *  This file is part of Uxi-amarelo - <http://www.joseflavio.com/uxiamarelo/>.
+ *  This file is part of Uxi-amarelo - <http://joseflavio.com/uxiamarelo/>.
  *  
  *  Uxi-amarelo is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License as published by
@@ -19,9 +19,9 @@
  */
 
 /*
- *  Direitos Autorais Reservados (C) 2016 José Flávio de Souza Dias Júnior
+ *  Direitos Autorais Reservados (C) 2016-2018 José Flávio de Souza Dias Júnior
  * 
- *  Este arquivo é parte de Uxi-amarelo - <http://www.joseflavio.com/uxiamarelo/>.
+ *  Este arquivo é parte de Uxi-amarelo - <http://joseflavio.com/uxiamarelo/>.
  * 
  *  Uxi-amarelo é software livre: você pode redistribuí-lo e/ou modificá-lo
  *  sob os termos da Licença Pública Menos Geral GNU conforme publicada pela
