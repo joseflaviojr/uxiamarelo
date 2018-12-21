@@ -195,10 +195,18 @@ public class Servico {
 			
 			if( objeto != null ) json = objeto.toString();
 			
-			String resultado = "";
-			try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
-				resultado = udg.solicitar( copaiba, classe, json, metodo );
-				if( resultado == null ) resultado = "";
+			String resultado;
+			
+			if( comando == null ){
+				try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
+					resultado = udg.solicitar( copaiba, classe, json, metodo );
+					if( resultado == null ) resultado = "";
+				}
+			}else if( comando.equals( "voltar" ) ){
+				resultado = json;
+				comando   = null;
+			}else{
+				resultado = "";
 			}
 			
 			if( comando == null ){

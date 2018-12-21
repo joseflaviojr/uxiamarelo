@@ -65,7 +65,7 @@ public class Util {
 	
 	/**
 	 * Encapsula um {@code valor} num determinado {@code caminho} interno de um {@link JSONObject objeto} {@code raiz}.
-	 * @param caminho Endereço da variável interna que receberá o {@code valor}. O último nó poderá ser um índice de {@link JSONArray}, sendo 1 o primeiro elemento e 0 a indicação de último elemento.
+	 * @param caminho Endereço da variável interna que receberá o {@code valor}. O último nó poderá ser um número inteiro qualquer indicando que a variável é um {@link JSONArray}.
 	 * @param valor Valor a ser atribuído, podendo ser de qualquer tipo compatível com {@link JSON}.
 	 * @param raiz {@link JSONObject} raiz.
 	 * @return Último {@link JSONObject} da cadeia referente ao {@code caminho}.
@@ -79,17 +79,17 @@ public class Util {
 			
 		}else if( caminho.length == 2 ){
 			
-			int indice = -1;
 			try{
-				indice = Integer.parseInt( caminho[1] );
-			}catch( NumberFormatException e ){}
-			
-			if( indice >= 0 ){
+				
+				Integer.parseInt( caminho[1] );
+				
 				JSONArray array = raiz.optJSONArray( caminho[0] );
 				if( array == null ) raiz.put( caminho[0], array = new JSONArray() );
-				if( indice == 0 || indice > array.length() ) array.put( valor );
-				else array.put( indice - 1, valor );
+				
+				array.put( valor );
 				return raiz;
+				
+			}catch( NumberFormatException e ){
 			}
 			
 		}

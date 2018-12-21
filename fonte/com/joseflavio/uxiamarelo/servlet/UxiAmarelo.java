@@ -225,10 +225,18 @@ public class UxiAmarelo extends HttpServlet {
 				}
 			}
 			
-			String resultado = "";
-			try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
-				resultado = udg.solicitar( copaibaParam[0], copaibaParam[1], json.toString(), copaibaParam[2] );
-                if( resultado == null ) resultado = "";
+			String resultado;
+			
+			if( comando == null ){
+				try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
+					resultado = udg.solicitar( copaibaParam[0], copaibaParam[1], json.toString(), copaibaParam[2] );
+					if( resultado == null ) resultado = "";
+				}
+			}else if( comando.equals( "voltar" ) ){
+				resultado = json.toString();
+				comando   = null;
+			}else{
+				resultado = "";
 			}
 			
 			if( comando == null ){

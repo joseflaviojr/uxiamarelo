@@ -14,18 +14,18 @@ A figura a seguir ilustra o escopo de aplicação da Uxi-amarelo:
 
 ## Versão Atual
 
-1.0-A11
+1.0-A12
 
 Padrão de versionamento: [JFV](http://joseflavio.com/jfv)
 
 ## Instalação
 
-Para implantar a Uxi-amarelo, basta instalar o arquivo [uxiamarelo.war](https://github.com/joseflaviojr/uxiamarelo/releases/download/1.0-A11/uxiamarelo.war) num servidor Web que implemente a especificação JavaEE, como o [Apache TomEE](http://tomee.apache.org/).
+Para implantar a Uxi-amarelo, basta instalar o arquivo [uxiamarelo.war](https://github.com/joseflaviojr/uxiamarelo/releases/download/1.0-A12/uxiamarelo.war) num servidor Web que implemente a especificação JavaEE, como o [Apache TomEE](http://tomee.apache.org/).
 
 ### Requisitos para instalação
 
 * Java >= 1.8
-* Apache TomEE Plus >= 1.7.3
+* Apache TomEE Plus >= 1.7.5 com JDK 8
 
 ## Desenvolvimento
 
@@ -40,7 +40,7 @@ gradle cleanIdea idea
 
 * Git >= 2.8
 * Java >= 1.8
-* Gradle >= 3.1
+* Gradle >= 4.7
 
 ## Compilação
 

@@ -11,7 +11,7 @@ String descricao = "Interface Web para Unha-de-gato."
 
 group = "com.joseflavio"
 archivesBaseName = "uxiamarelo"
-version = "1.0-A11"
+version = "1.0-A12"
 
 //------------------------------------------------------
 
@@ -21,7 +21,8 @@ version = "1.0-A11"
 "fonte",      // Código fonte: *.java
 "recurso",    // Anexos que serão embutidos no ".jar"
 "projeto",    // Arquivos de projeto: doc, svg, psd, etc.
-"web"         // Arquivos Web: html, css, js
+"web",        // Arquivos Web: html, css, js
+"rascunho"    // Arquivos temporários e descartáveis
 
 ].each { new File(it).mkdirs() }
 
@@ -54,9 +55,9 @@ repositories {
 
 dependencies {
     compile fileTree(dir:"biblioteca", include:["*.jar"])
-    compile "com.joseflavio:unhadegato:1.0-A15"
-    compile "org.apache.tomee:javaee-api:7.0-1"
-    compile "org.apache.commons:commons-lang3:3.7"
+    compile "com.joseflavio:unhadegato:1.0-A16"
+    compile "org.apache.tomee:javaee-api:8.0"
+    compile "org.apache.commons:commons-lang3:3.8.1"
 }
 
 //------------------------------------------------------
@@ -78,7 +79,7 @@ task warHTML(type: Copy) {
 
 task warJava(type: Copy, dependsOn: compileJava) {
     into "$buildDir/web/WEB-INF/classes"
-    from sourceSets.main.output.classesDir
+    from sourceSets.main.output.classesDirs
 }
 
 task warRec(type: Copy) {
@@ -140,9 +141,11 @@ eclipse {
     }
 }
 
-eclipseJdt << {
-    file(".settings/org.eclipse.core.resources.prefs").text =
-        "eclipse.preferences.version=1\nencoding/<project>=" + codificacao
+eclipseJdt {
+    doLast {
+        file(".settings/org.eclipse.core.resources.prefs").text =
+            "eclipse.preferences.version=1\nencoding/<project>=" + codificacao
+    }
 }
 
 //------------------------------------------------------
