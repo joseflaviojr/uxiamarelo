@@ -1,6 +1,6 @@
 
 /*
- *  Copyright (C) 2016-2018 JosÈ Fl·vio de Souza Dias J˙nior
+ *  Copyright (C) 2016-2018 Jos√© Fl√°vio de Souza Dias J√∫nior
  *  
  *  This file is part of Uxi-amarelo - <http://joseflavio.com/uxiamarelo/>.
  *  
@@ -19,22 +19,22 @@
  */
 
 /*
- *  Direitos Autorais Reservados (C) 2016-2018 JosÈ Fl·vio de Souza Dias J˙nior
+ *  Direitos Autorais Reservados (C) 2016-2018 Jos√© Fl√°vio de Souza Dias J√∫nior
  * 
- *  Este arquivo È parte de Uxi-amarelo - <http://joseflavio.com/uxiamarelo/>.
+ *  Este arquivo √© parte de Uxi-amarelo - <http://joseflavio.com/uxiamarelo/>.
  * 
- *  Uxi-amarelo È software livre: vocÍ pode redistribuÌ-lo e/ou modific·-lo
- *  sob os termos da LicenÁa P˙blica Menos Geral GNU conforme publicada pela
- *  Free Software Foundation, tanto a vers„o 3 da LicenÁa, como
- *  (a seu critÈrio) qualquer vers„o posterior.
+ *  Uxi-amarelo √© software livre: voc√™ pode redistribu√≠-lo e/ou modific√°-lo
+ *  sob os termos da Licen√ßa P√∫blica Menos Geral GNU conforme publicada pela
+ *  Free Software Foundation, tanto a vers√£o 3 da Licen√ßa, como
+ *  (a seu crit√©rio) qualquer vers√£o posterior.
  * 
- *  Uxi-amarelo È distribuÌdo na expectativa de que seja ˙til,
- *  porÈm, SEM NENHUMA GARANTIA; nem mesmo a garantia implÌcita de
- *  COMERCIABILIDADE ou ADEQUA«√O A UMA FINALIDADE ESPECÕFICA. Consulte a
- *  LicenÁa P˙blica Menos Geral do GNU para mais detalhes.
+ *  Uxi-amarelo √© distribu√≠do na expectativa de que seja √∫til,
+ *  por√©m, SEM NENHUMA GARANTIA; nem mesmo a garantia impl√≠cita de
+ *  COMERCIABILIDADE ou ADEQUA√á√ÉO A UMA FINALIDADE ESPEC√çFICA. Consulte a
+ *  Licen√ßa P√∫blica Menos Geral do GNU para mais detalhes.
  * 
- *  VocÍ deve ter recebido uma cÛpia da LicenÁa P˙blica Menos Geral do GNU
- *  junto com Uxi-amarelo. Se n„o, veja <http://www.gnu.org/licenses/>.
+ *  Voc√™ deve ter recebido uma c√≥pia da Licen√ßa P√∫blica Menos Geral do GNU
+ *  junto com Uxi-amarelo. Se n√£o, veja <http://www.gnu.org/licenses/>.
  */
 
 package com.joseflavio.uxiamarelo;
@@ -55,7 +55,7 @@ import java.util.Properties;
 import java.util.Set;
 
 /**
- * @author JosÈ Fl·vio de Souza Dias J˙nior
+ * @author Jos√© Fl√°vio de Souza Dias J√∫nior
  */
 public class Configuracao {
 	
@@ -116,7 +116,7 @@ public class Configuracao {
 	}
 	
 	/**
-	 * EndereÁo IP do {@link UnhaDeGato}.
+	 * Endere√ßo IP do {@link UnhaDeGato}.
 	 * @see UnhaDeGato#UnhaDeGato(String, int, boolean, boolean)
 	 */
 	public static String getEndereco() {
@@ -153,8 +153,8 @@ public class Configuracao {
 	}
 	
 	/**
-	 * EndereÁo para depÛsito dos arquivos obtidos por upload.<br>
-	 * Pode ser absoluto local ("/home/user/upload", "/tmp", etc.) ou relativo ao diretÛrio raiz da aplicaÁ„o web.
+	 * Endere√ßo para dep√≥sito dos arquivos obtidos por upload.<br>
+	 * Pode ser absoluto local ("/home/user/upload", "/tmp", etc.) ou relativo ao diret√≥rio raiz da aplica√ß√£o web.
 	 */
 	public static String getDiretorio() {
 		return diretorio;
@@ -162,14 +162,14 @@ public class Configuracao {
 	
 	/**
 	 * {@link #getDiretorio()} na forma de {@link URL}, para acesso externo.<br>
-	 * Pode ser absoluto prefixado ("http://", "file://", etc.) ou relativo ‡ URL base da aplicaÁ„o web.
+	 * Pode ser absoluto prefixado ("http://", "file://", etc.) ou relativo √† URL base da aplica√ß√£o web.
 	 */
 	public static String getDiretorioURL() {
 		return diretorioURL;
 	}
 
 	/**
-	 * Padr„o do {@link File#getName() nome} dos arquivos obtidos por upload: "uuid" ({@link java.util.UUID}) ou "original" (se possÌvel).
+	 * Padr√£o do {@link File#getName() nome} dos arquivos obtidos por upload: "uuid" ({@link java.util.UUID}) ou "original" (se poss√≠vel).
 	 */
 	public static String getArquivoNome() {
 		return arquivoNome;
@@ -183,7 +183,7 @@ public class Configuracao {
 	}
     
     /**
-     * {@link javax.servlet.http.Cookie Cookies} que n„o devem ser enviados como membros do {@link JSON}.
+     * {@link javax.servlet.http.Cookie Cookies} que n√£o devem ser enviados como membros do {@link JSON}.
      */
     public static String getCookieBloquear() {
         return cookieBloquear;
@@ -197,7 +197,7 @@ public class Configuracao {
 	}
 	
 	/**
-	 * Separador de endereÁamento de objetos no encapsulamento.
+	 * Separador de endere√ßamento de objetos no encapsulamento.
 	 */
 	public static String getEncapsulamentoSeparador() {
 		return encapsulamentoSeparador;

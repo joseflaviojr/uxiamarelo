@@ -1,6 +1,6 @@
 
 /*
- *  Copyright (C) 2016-2018 JosÈ Fl·vio de Souza Dias J˙nior
+ *  Copyright (C) 2016-2018 Jos√© Fl√°vio de Souza Dias J√∫nior
  *  
  *  This file is part of Uxi-amarelo - <http://joseflavio.com/uxiamarelo/>.
  *  
@@ -19,22 +19,22 @@
  */
 
 /*
- *  Direitos Autorais Reservados (C) 2016-2018 JosÈ Fl·vio de Souza Dias J˙nior
+ *  Direitos Autorais Reservados (C) 2016-2018 Jos√© Fl√°vio de Souza Dias J√∫nior
  * 
- *  Este arquivo È parte de Uxi-amarelo - <http://joseflavio.com/uxiamarelo/>.
+ *  Este arquivo √© parte de Uxi-amarelo - <http://joseflavio.com/uxiamarelo/>.
  * 
- *  Uxi-amarelo È software livre: vocÍ pode redistribuÌ-lo e/ou modific·-lo
- *  sob os termos da LicenÁa P˙blica Menos Geral GNU conforme publicada pela
- *  Free Software Foundation, tanto a vers„o 3 da LicenÁa, como
- *  (a seu critÈrio) qualquer vers„o posterior.
+ *  Uxi-amarelo √© software livre: voc√™ pode redistribu√≠-lo e/ou modific√°-lo
+ *  sob os termos da Licen√ßa P√∫blica Menos Geral GNU conforme publicada pela
+ *  Free Software Foundation, tanto a vers√£o 3 da Licen√ßa, como
+ *  (a seu crit√©rio) qualquer vers√£o posterior.
  * 
- *  Uxi-amarelo È distribuÌdo na expectativa de que seja ˙til,
- *  porÈm, SEM NENHUMA GARANTIA; nem mesmo a garantia implÌcita de
- *  COMERCIABILIDADE ou ADEQUA«√O A UMA FINALIDADE ESPECÕFICA. Consulte a
- *  LicenÁa P˙blica Menos Geral do GNU para mais detalhes.
+ *  Uxi-amarelo √© distribu√≠do na expectativa de que seja √∫til,
+ *  por√©m, SEM NENHUMA GARANTIA; nem mesmo a garantia impl√≠cita de
+ *  COMERCIABILIDADE ou ADEQUA√á√ÉO A UMA FINALIDADE ESPEC√çFICA. Consulte a
+ *  Licen√ßa P√∫blica Menos Geral do GNU para mais detalhes.
  * 
- *  VocÍ deve ter recebido uma cÛpia da LicenÁa P˙blica Menos Geral do GNU
- *  junto com Uxi-amarelo. Se n„o, veja <http://www.gnu.org/licenses/>.
+ *  Voc√™ deve ter recebido uma c√≥pia da Licen√ßa P√∫blica Menos Geral do GNU
+ *  junto com Uxi-amarelo. Se n√£o, veja <http://www.gnu.org/licenses/>.
  */
 
 package com.joseflavio.uxiamarelo.util;
@@ -46,14 +46,14 @@ import org.json.JSONString;
 import org.json.JSONTokener;
 
 /**
- * @author JosÈ Fl·vio de Souza Dias J˙nior
+ * @author Jos√© Fl√°vio de Souza Dias J√∫nior
  */
 public class Util {
 	
 	/**
-	 * ObtÈm uma {@link String} de um {@link JSON}, conforme {@code comando}.
+	 * Obt√©m uma {@link String} de um {@link JSON}, conforme {@code comando}.
 	 * @param prefixo Prefixo do {@code comando}.
-	 * @param comando Comando de obtenÁ„o.
+	 * @param comando Comando de obten√ß√£o.
 	 * @param json {@link JSONObject} ou {@link JSONString}.
 	 */
 	public static String obterStringDeJSON( String prefixo, String comando, String json ) {
@@ -65,10 +65,10 @@ public class Util {
 	
 	/**
 	 * Encapsula um {@code valor} num determinado {@code caminho} interno de um {@link JSONObject objeto} {@code raiz}.
-	 * @param caminho EndereÁo da vari·vel interna que receber· o {@code valor}. O ˙ltimo nÛ poder· ser um n˙mero inteiro qualquer indicando que a vari·vel È um {@link JSONArray}.
-	 * @param valor Valor a ser atribuÌdo, podendo ser de qualquer tipo compatÌvel com {@link JSON}.
+	 * @param caminho Endere√ßo da vari√°vel interna que receber√° o {@code valor}. O √∫ltimo n√≥ poder√° ser um n√∫mero inteiro qualquer indicando que a vari√°vel √© um {@link JSONArray}.
+	 * @param valor Valor a ser atribu√≠do, podendo ser de qualquer tipo compat√≠vel com {@link JSON}.
 	 * @param raiz {@link JSONObject} raiz.
-	 * @return ⁄ltimo {@link JSONObject} da cadeia referente ao {@code caminho}.
+	 * @return √öltimo {@link JSONObject} da cadeia referente ao {@code caminho}.
 	 */
 	public static JSONObject encapsular( String[] caminho, Object valor, JSONObject raiz ) {
 		
