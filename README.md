@@ -54,7 +54,7 @@ gradle clean build
 
 ### Português
 
-Direitos Autorais Reservados &copy; 2016-2018 [José Flávio de Souza Dias Júnior](http://joseflavio.com)
+Direitos Autorais Reservados &copy; 2016-2019 [José Flávio de Souza Dias Júnior](http://joseflavio.com)
 
 Este arquivo é parte de Uxi-amarelo - [http://joseflavio.com/uxiamarelo](http://joseflavio.com/uxiamarelo).
 
@@ -73,7 +73,7 @@ junto com Uxi-amarelo. Se não, veja [https://www.gnu.org/licenses/lgpl.html](ht
 
 ### English
 
-Copyright &copy; 2016-2018 [José Flávio de Souza Dias Júnior](http://joseflavio.com)
+Copyright &copy; 2016-2019 [José Flávio de Souza Dias Júnior](http://joseflavio.com)
 
 This file is part of Uxi-amarelo - [http://joseflavio.com/uxiamarelo](http://joseflavio.com/uxiamarelo).
 
