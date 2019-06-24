@@ -39,26 +39,45 @@
 
 package com.joseflavio.uxiamarelo.servlet;
 
-import com.joseflavio.unhadegato.UnhaDeGato;
-import com.joseflavio.urucum.json.JSON;
-import com.joseflavio.urucum.texto.StringUtil;
-import com.joseflavio.uxiamarelo.Configuracao;
-import com.joseflavio.uxiamarelo.util.Util;
-import org.apache.commons.io.IOUtils;
-
-import javax.servlet.ServletException;
-import javax.servlet.annotation.MultipartConfig;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.*;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.UUID;
+
+import javax.ejb.EJB;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
+
+import com.joseflavio.copaiba.CopaibaConexao;
+import com.joseflavio.urucum.json.JSON;
+import com.joseflavio.urucum.texto.StringUtil;
+import com.joseflavio.uxiamarelo.UxiAmarelo;
+import com.joseflavio.uxiamarelo.util.Util;
+
+import org.apache.commons.io.IOUtils;
 
 /**
- * Interface {@link HttpServlet} para {@link UnhaDeGato#solicitar(String, String, String, String)}.
+ * Fachada {@link HttpServlet} para {@link CopaibaConexao#solicitar(String, String, String)}.
  * @author José Flávio de Souza Dias Júnior
  */
 @WebServlet("/servlet/solicitar")
@@ -67,18 +86,19 @@ import java.util.regex.Pattern;
 	maxFileSize=-1L,
 	maxRequestSize=1024*1024*1024*1 //1GB
 )
-public class UxiAmarelo extends HttpServlet {
+public class UxiAmareloServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
 	
-	private static final Pattern padrao_url = Pattern.compile( ".{3,5}://.+" );
+	@EJB
+	private UxiAmarelo uxiAmarelo;
 
 	@Override
 	protected void doPost( HttpServletRequest requisicao, HttpServletResponse resposta ) throws ServletException, IOException {
 		
 		String tipo = requisicao.getContentType();
 		if( tipo == null || tipo.isEmpty() ) tipo = "text/plain";
-		
+
 		String codificacao = requisicao.getCharacterEncoding();
 		if( codificacao == null || codificacao.isEmpty() ) codificacao = "UTF-8";
 		
@@ -87,7 +107,13 @@ public class UxiAmarelo extends HttpServlet {
         
 		try{
 			
-			JSON json = new JSON();
+			JSON json;
+
+			if( tipo.contains( "json" ) ){
+				json = new JSON( IOUtils.toString( requisicao.getInputStream(), codificacao ) );
+			}else{
+				json = new JSON();
+			}
 			
 			Enumeration<String> parametros = requisicao.getParameterNames();
 			
@@ -103,13 +129,13 @@ public class UxiAmarelo extends HttpServlet {
 				
 				if( ! arquivos.isEmpty() ){
 					
-					File diretorio = new File( Configuracao.getDiretorio() );
+					File diretorio = new File( uxiAmarelo.getDiretorio() );
 					
 					if( ! diretorio.isAbsolute() ){
 						diretorio = new File(
 							requisicao.getServletContext().getRealPath("") +
 							File.separator +
-							Configuracao.getDiretorio()
+							uxiAmarelo.getDiretorio()
 						);
 					}
 					
@@ -117,9 +143,9 @@ public class UxiAmarelo extends HttpServlet {
 					
 					String diretorioStr = diretorio.getAbsolutePath();
 					
-					String url = Configuracao.getDiretorioURL();
+					String url = uxiAmarelo.getDiretorioURL();
 					
-					if( ! padrao_url.matcher( url ).matches() ){
+					if( uxiAmarelo.isDiretorioURLRelativo() ){
 						String url_esquema  = requisicao.getScheme();
 						String url_servidor = requisicao.getServerName();
 						int    url_porta    = requisicao.getServerPort();
@@ -142,13 +168,15 @@ public class UxiAmarelo extends HttpServlet {
 						String nome = nome_original;
 
 						if( nome == null || nome.isEmpty() ){
-							String valor = IOUtils.toString( arquivo.getInputStream(), codificacao );
-							valor = URLDecoder.decode( valor, codificacao );
-							json.put( chave, valor );
-							continue;
+							try( InputStream is = arquivo.getInputStream() ){
+								String valor = IOUtils.toString( is, codificacao );
+								valor = URLDecoder.decode( valor, codificacao );
+								json.put( chave, valor );
+								continue;
+							}
 						}
 
-						if( Configuracao.getArquivoNome().equals( "uuid" ) ){
+						if( uxiAmarelo.getArquivoNome().equals( "uuid" ) ){
 							nome = UUID.randomUUID().toString();
 						}
 						
@@ -159,6 +187,7 @@ public class UxiAmarelo extends HttpServlet {
 						arquivo.write( diretorioStr + File.separator + nome );
 						
 						List<JSON> lista = mapa_arquivos.get( chave );
+
 						if( lista == null ){
 							lista = new LinkedList<>();
 							mapa_arquivos.put( chave, lista );
@@ -172,12 +201,12 @@ public class UxiAmarelo extends HttpServlet {
 						
 					}
 					
-					for( String chave : mapa_arquivos.keySet() ){
-						List<JSON> lista = mapa_arquivos.get( chave );
+					for( Entry<String,List<JSON>> entrada : mapa_arquivos.entrySet() ){
+						List<JSON> lista = entrada.getValue();
 						if( lista.size() > 1 ){
-							json.put( chave, lista );
+							json.put( entrada.getKey(), lista );
 						}else{
-							json.put( chave, lista.get( 0 ) );
+							json.put( entrada.getKey(), lista.get( 0 ) );
 						}
 					}
 					
@@ -198,12 +227,12 @@ public class UxiAmarelo extends HttpServlet {
 			String comando = (String) json.remove( "uxicmd" );
 			if( StringUtil.tamanho( comando ) == 0 ) comando = null;
 
-			if( Configuracao.isCookieEnviar() ){
+			if( uxiAmarelo.isCookieEnviar() ){
 				Cookie[] cookies = requisicao.getCookies();
 				if( cookies != null ){
 					for( Cookie cookie : cookies ){
 						String nome = cookie.getName();
-						if( Configuracao.cookieBloqueado( nome ) ) continue;
+						if( uxiAmarelo.cookieBloqueado( nome ) ) continue;
 						if( ! json.has( nome ) ){
 							try{
 								json.put( nome, URLDecoder.decode( cookie.getValue(), "UTF-8" ) );
@@ -215,10 +244,12 @@ public class UxiAmarelo extends HttpServlet {
 				}
 			}
 			
-			if( Configuracao.isEncapsulamentoAutomatico() ){
-				String separador = Configuracao.getEncapsulamentoSeparador();
-				for( String chave : json.keySet().toArray( new String[0] ) ){
-					String[] caminho = chave.split( separador );
+			if( uxiAmarelo.isEncapsulamentoAutomatico() ){
+				final String sepstr = uxiAmarelo.getEncapsulamentoSeparador();
+				final char   sep0   = sepstr.charAt(0);
+				for( String chave : new HashSet<>( json.keySet() ) ){
+					if( chave.indexOf( sep0 ) == -1 ) continue;
+					String[] caminho = chave.split( sepstr );
 					if( caminho.length > 1 ){
 						Util.encapsular( caminho, json.remove( chave ), json );
 					}
@@ -228,8 +259,8 @@ public class UxiAmarelo extends HttpServlet {
 			String resultado;
 			
 			if( comando == null ){
-				try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
-					resultado = udg.solicitar( copaibaParam[0], copaibaParam[1], json.toString(), copaibaParam[2] );
+				try( CopaibaConexao cc = uxiAmarelo.conectarCopaiba( copaibaParam[0] ) ){
+					resultado = cc.solicitar( copaibaParam[1], json.toString(), copaibaParam[2] );
 					if( resultado == null ) resultado = "";
 				}
 			}else if( comando.equals( "voltar" ) ){
@@ -289,14 +320,9 @@ public class UxiAmarelo extends HttpServlet {
 			
 			resposta.setStatus( HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
 			resposta.setContentType( "application/json" );
-			
-			saida.write(
-				new JSON()
-				.put( "classe", e.getClass().getName() )
-				.put( "mensagem", e.getMessage() )
-				.toString()
-			);
-			
+
+			saida.write( Util.gerarRespostaErro( e ).toString() );
+
 		}
 
         saida.flush();

@@ -39,18 +39,6 @@
 
 package com.joseflavio.uxiamarelo.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.joseflavio.unhadegato.UnhaDeGato;
-import com.joseflavio.urucum.json.JSON;
-import com.joseflavio.uxiamarelo.Configuracao;
-import com.joseflavio.uxiamarelo.util.Util;
-import org.apache.commons.io.IOUtils;
-
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.*;
-import javax.ws.rs.core.*;
-import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -59,13 +47,41 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.Base64;
+import java.util.HashSet;
 import java.util.Map;
 
+import javax.ejb.EJB;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Cookie;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
+
+import com.joseflavio.copaiba.CopaibaConexao;
+import com.joseflavio.urucum.json.JSON;
+import com.joseflavio.uxiamarelo.UxiAmarelo;
+import com.joseflavio.uxiamarelo.util.Util;
+
+import org.apache.commons.io.IOUtils;
+
 /**
+ * Fachada REST para {@link com.joseflavio.copaiba.Copaiba Copaíba}s.
  * @author José Flávio de Souza Dias Júnior
  */
 @Path("/")
-public class Servico {
+public class UxiAmareloREST {
+
+	@EJB
+	private UxiAmarelo uxiAmarelo;
 	
 	@GET
 	@Path("teste")
@@ -75,26 +91,26 @@ public class Servico {
 	}
 	
 	/**
-	 * {@link UnhaDeGato#executar(String, String, String)}
+	 * {@link CopaibaConexao#executar(String, String, java.io.Writer, boolean)}
 	 */
 	@POST
 	@Path("{copaiba}/executar/{linguagem}")
 	@Consumes(MediaType.TEXT_PLAIN)
     public Response executar(
-    		@PathParam("copaiba") String copaiba,
+    		@PathParam("copaiba")   String copaiba,
     		@PathParam("linguagem") String linguagem,
     		String rotina
     	) {
-		try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
-			String resultado = udg.executar( copaiba, linguagem, rotina );
-			return respostaOK( resultado );
+		try( CopaibaConexao cc = uxiAmarelo.conectarCopaiba( copaiba ) ){
+			String resultado = (String) cc.executar( linguagem, rotina, null, true );
+			return respostaEXITO( resultado );
 		}catch( Exception e ){
 			return respostaERRO( e );
 		}
     }
 	
 	/**
-	 * {@link UnhaDeGato#executar(String, String, String)}
+	 * {@link CopaibaConexao#executar(String, String, java.io.Writer, boolean)}
 	 */
 	@GET
 	@Path("{copaiba}/executar/{linguagem}/{rotina}")
@@ -108,24 +124,24 @@ public class Servico {
 	}
 	
 	/**
-	 * {@link UnhaDeGato#obter(String, String)}
+	 * {@link CopaibaConexao#obter(String, boolean)}
 	 */
 	@GET
 	@Path("{copaiba}/obter/{variavel: [a-zA-Z][a-zA-Z0-9_$]*}")
     public Response obter(
-    		@PathParam("copaiba") String copaiba,
+    		@PathParam("copaiba")  String copaiba,
     		@PathParam("variavel") String variavel
     	) {
-		try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
-			String resultado = udg.obter( copaiba, variavel );
-			return respostaOK( resultado );
+		try( CopaibaConexao cc = uxiAmarelo.conectarCopaiba( copaiba ) ){
+			String resultado = (String) cc.obter( variavel, true );
+			return respostaEXITO( resultado );
 		}catch( Exception e ){
 			return respostaERRO( e );
 		}
     }
 	
 	/**
-	 * {@link UnhaDeGato#solicitar(String, String, String, String)}
+	 * {@link CopaibaConexao#solicitar(String, String, String)}
 	 */
 	@POST
 	@Path("{copaiba}/solicitar/{classe: [a-zA-Z][a-zA-Z0-9_$.]*}/{metodo: [a-zA-Z][a-zA-Z0-9_$]*}")
@@ -142,7 +158,7 @@ public class Servico {
     }
 	
 	/**
-	 * {@link UnhaDeGato#solicitar(String, String, String, String)}
+	 * {@link CopaibaConexao#solicitar(String, String, String)}
 	 */
 	@GET
 	@Path("{copaiba}/solicitar/{classe: [a-zA-Z][a-zA-Z0-9_$.]*}/{metodo: [a-zA-Z][a-zA-Z0-9_$]*}/{json}")
@@ -164,13 +180,13 @@ public class Servico {
 		
 			JSON objeto = null;
 			
-			if( Configuracao.isCookieEnviar() ){
+			if( uxiAmarelo.isCookieEnviar() ){
 				Map<String, Cookie> cookies = cabecalho.getCookies();
 				if( cookies.size() > 0 ){
 					if( objeto == null ) objeto = new JSON( json );
 					for( Cookie cookie : cookies.values() ){
 						String nome = cookie.getName();
-						if( Configuracao.cookieBloqueado( nome ) ) continue;
+						if( uxiAmarelo.cookieBloqueado( nome ) ) continue;
 						if( ! objeto.has( nome ) ){
 							try{
 								objeto.put( nome, URLDecoder.decode( cookie.getValue(), "UTF-8" ) );
@@ -182,11 +198,13 @@ public class Servico {
 				}
 			}
 			
-			if( Configuracao.isEncapsulamentoAutomatico() ){
+			if( uxiAmarelo.isEncapsulamentoAutomatico() ){
 				if( objeto == null ) objeto = new JSON( json );
-				String separador = Configuracao.getEncapsulamentoSeparador();
-				for( String chave : objeto.keySet().toArray( new String[0] ) ){
-					String[] caminho = chave.split( separador );
+				final String sepstr = uxiAmarelo.getEncapsulamentoSeparador();
+				final char   sep0   = sepstr.charAt(0);
+				for( String chave : new HashSet<>( objeto.keySet() ) ){
+					if( chave.indexOf( sep0 ) == -1 ) continue;
+					String[] caminho = chave.split( sepstr );
 					if( caminho.length > 1 ){
 						Util.encapsular( caminho, objeto.remove( chave ), objeto );
 					}
@@ -198,8 +216,8 @@ public class Servico {
 			String resultado;
 			
 			if( comando == null ){
-				try( UnhaDeGato udg = Configuracao.getUnhaDeGato() ){
-					resultado = udg.solicitar( copaiba, classe, json, metodo );
+				try( CopaibaConexao cc = uxiAmarelo.conectarCopaiba( copaiba ) ){
+					resultado = cc.solicitar( classe, json, metodo );
 					if( resultado == null ) resultado = "";
 				}
 			}else if( comando.equals( "voltar" ) ){
@@ -211,7 +229,7 @@ public class Servico {
 			
 			if( comando == null ){
 				
-				return respostaOK( resultado );
+				return respostaEXITO( resultado );
 				
 			}else if( comando.startsWith( "redirecionar" ) ){
 				
@@ -267,7 +285,7 @@ public class Servico {
 		
 	}
 	
-	private Response respostaOK( String resultado ) {
+	private Response respostaEXITO( String resultado ) {
 		return Response
 			.status( Status.OK )
 			.type( MediaType.APPLICATION_JSON + "; charset=UTF-8" )
@@ -276,17 +294,11 @@ public class Servico {
 	}
 	
 	private Response respostaERRO( Throwable e ) {
-		
-		ObjectNode json = new ObjectMapper().createObjectNode();
-		json.put( "classe", e.getClass().getName() );
-		json.put( "mensagem", e.getMessage() );
-		
 		return Response
 			.status( Status.INTERNAL_SERVER_ERROR )
 			.type( MediaType.APPLICATION_JSON + "; charset=UTF-8" )
-			.entity( json.toString() )
+			.entity( Util.gerarRespostaErro( e ).toString() )
 			.build();
-		
 	}
 	
 }

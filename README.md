@@ -1,26 +1,26 @@
 # Uxi-amarelo
 
-Interface Web para [Unha-de-gato](http://joseflavio.com/unhadegato).
+Fachada Web para [Copaíba](http://joseflavio.com/copaiba)s.
 
-Web interface for [Unha-de-gato](http://joseflavio.com/unhadegato).
+Web facade for [Copaíba](http://joseflavio.com/copaiba)s.
 
 ## Descrição
 
-A Uxi-amarelo é uma aplicação Web que permite a comunicação com [Unha-de-gato](http://joseflavio.com/unhadegato) através de protocolos comuns, tais como HTTP e REST, ampliando as possibilidades de manipulação de dados expostos com [Copaíba](http://joseflavio.com/copaiba).
+A Uxi-amarelo é uma aplicação Web que permite a comunicação com [Copaíba](http://joseflavio.com/copaiba)s através de protocolos comuns, como HTTP/S e REST.
 
-A figura a seguir ilustra o escopo de aplicação da Uxi-amarelo:
+A figura a seguir ilustra o esquema geral do funcionamento da Uxi-amarelo:
 
 <img src="projeto/EsquemaGeral.png">
 
 ## Versão Atual
 
-1.0-A12
+1.0-A13
 
 Padrão de versionamento: [JFV](http://joseflavio.com/jfv)
 
 ## Instalação
 
-Para implantar a Uxi-amarelo, basta instalar o arquivo [uxiamarelo.war](https://github.com/joseflaviojr/uxiamarelo/releases/download/1.0-A12/uxiamarelo.war) num servidor Web que implemente a especificação JavaEE, como o [Apache TomEE](http://tomee.apache.org/).
+Para implantar a Uxi-amarelo, basta instalar o arquivo [uxiamarelo.war](https://github.com/joseflaviojr/uxiamarelo/releases/download/1.0-A13/uxiamarelo.war) num servidor Web que implemente a especificação JavaEE, como o [Apache TomEE](http://tomee.apache.org/).
 
 ### Requisitos para instalação
 

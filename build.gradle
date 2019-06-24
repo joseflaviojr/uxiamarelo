@@ -7,11 +7,11 @@ apply plugin: "idea"
 //------------------------------------------------------
 
 String nome = "Uxi-amarelo"
-String descricao = "Interface Web para Unha-de-gato."
+String descricao = "Fachada Web para Copaíbas."
 
 group = "com.joseflavio"
 archivesBaseName = "uxiamarelo"
-version = "1.0-A12"
+version = "1.0-A13"
 
 //------------------------------------------------------
 
@@ -21,15 +21,15 @@ version = "1.0-A12"
 "fonte",      // Código fonte: *.java
 "recurso",    // Anexos que serão embutidos no ".jar"
 "projeto",    // Arquivos de projeto: doc, svg, psd, etc.
-"web",        // Arquivos Web: html, css, js
-"rascunho"    // Arquivos temporários e descartáveis
+"rascunho",   // Arquivos temporários e descartáveis
+"web"         // Arquivos Web: html, css, js
 
 ].each { new File(it).mkdirs() }
 
 //------------------------------------------------------
 
 float javaVersao = 1.8
-String codificacao = "ISO-8859-1"
+String codificacao = "UTF-8"
 
 sourceCompatibility = javaVersao
 
@@ -55,9 +55,13 @@ repositories {
 
 dependencies {
     compile fileTree(dir:"biblioteca", include:["*.jar"])
-    compile "com.joseflavio:unhadegato:1.0-A16"
-    compile "org.apache.tomee:javaee-api:8.0"
-    compile "org.apache.commons:commons-lang3:3.8.1"
+    compile "com.joseflavio:copaiba:1.0-A14"
+    compile("com.ibm.etcd:etcd-java:0.0.10"){
+        exclude group: "io.netty"
+    }
+    compile "org.apache.tomee:javaee-api:8.0-1"
+    compile "org.apache.commons:commons-io:1.3.2"
+    compile "org.apache.commons:commons-lang3:3.9"
 }
 
 //------------------------------------------------------
@@ -90,15 +94,12 @@ task warRec(type: Copy) {
 task warDep(type: Copy) {
     into "$buildDir/web/WEB-INF/lib"
     from configurations.runtime
-    exclude "javax.*"
-    exclude "javaee-api*"
-    exclude "validation-api*"
-    exclude "geronimo-osgi*"
-    exclude "log4j*"
-    exclude "junit*"
-    exclude "hamcrest*"
     exclude "groovy*"
-    exclude "jython*"
+    exclude "javaee-api*"
+    exclude "javax.*"
+    exclude "hamcrest*"
+    exclude "slf4j*"
+    exclude "junit*"
 }
 
 task war(type: Zip, dependsOn: [warHTML, warJava, warRec, warDep]) {

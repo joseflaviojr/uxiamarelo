@@ -39,7 +39,12 @@
 
 package com.joseflavio.uxiamarelo.util;
 
+import java.util.regex.Pattern;
+
+import com.joseflavio.urucum.comunicacao.Mensagem.Tipo;
+import com.joseflavio.urucum.comunicacao.Resposta;
 import com.joseflavio.urucum.json.JSON;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONString;
@@ -49,6 +54,8 @@ import org.json.JSONTokener;
  * @author José Flávio de Souza Dias Júnior
  */
 public class Util {
+
+	private static final Pattern padrao_url = Pattern.compile( ".{3,5}://.+" );
 	
 	/**
 	 * Obtém uma {@link String} de um {@link JSON}, conforme {@code comando}.
@@ -103,5 +110,32 @@ public class Util {
 		return encapsular( novo, valor, objeto );
 		
 	}
+
+	public static boolean isURL( String str ) {
+		return padrao_url.matcher( str ).matches();
+	}
 	
+	/**
+	 * @see Resposta
+	 * @see Tipo#ERRO
+	 */
+	public static JSON gerarRespostaErro( Throwable e ) {
+
+		String classe   = e.getClass().getName();
+		String mensagem = e.getMessage();
+
+		return
+		new JSON()
+		.put( "exito", false )
+		.put( "codigo", 999999 )
+		.put( "mensagens", new JSONArray( new JSON[]{
+			new JSON()
+			.put( "tipo", Tipo.ERRO )
+			.put( "argumento", classe + ": " + mensagem )
+		}))
+		.put( "classe", classe )
+		.put( "mensagem", mensagem );
+
+	}
+
 }

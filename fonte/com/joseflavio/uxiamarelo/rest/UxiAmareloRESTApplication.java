@@ -48,19 +48,17 @@ import java.util.Set;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
 
-import com.joseflavio.unhadegato.UnhaDeGato;
-
 /**
- * Interface {@link Application REST} para {@link UnhaDeGato}.
+ * Fachadas {@link Application REST} para {@link com.joseflavio.copaiba.Copaiba Copaíba}s.
  * @author José Flávio de Souza Dias Júnior
  */
 @ApplicationPath("/rest")
-public class UxiAmarelo extends Application {
+public class UxiAmareloRESTApplication extends Application {
 	
 	@Override
 	public Set<Class<?>> getClasses() {
 		Set<Class<?>> classes = new HashSet<>();
-		classes.add( Servico.class );
+		classes.add( UxiAmareloREST.class );
 		return classes;
 	}
 	
