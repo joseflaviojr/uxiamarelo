@@ -43,10 +43,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -80,7 +80,7 @@ import org.apache.commons.io.IOUtils;
  * Fachada {@link HttpServlet} para {@link CopaibaConexao#solicitar(String, String, String)}.
  * @author José Flávio de Souza Dias Júnior
  */
-@WebServlet("/servlet/solicitar")
+@WebServlet({"/servlet/solicitar", "/solicitar"})
 @MultipartConfig(
 	fileSizeThreshold=0,
 	maxFileSize=-1L,
@@ -99,10 +99,11 @@ public class UxiAmareloServlet extends HttpServlet {
 		String tipo = requisicao.getContentType();
 		if( tipo == null || tipo.isEmpty() ) tipo = "text/plain";
 
-		String codificacao = requisicao.getCharacterEncoding();
-		if( codificacao == null || codificacao.isEmpty() ) codificacao = "UTF-8";
+		String codif_str = requisicao.getCharacterEncoding();
+		if( codif_str == null || codif_str.isEmpty() ) codif_str = Util.CODIF_STR;
+		final Charset codif = Charset.forName( codif_str );
 		
-        resposta.setCharacterEncoding( codificacao );
+        resposta.setCharacterEncoding( codif_str );
         PrintWriter saida = resposta.getWriter();
         
 		try{
@@ -110,7 +111,7 @@ public class UxiAmareloServlet extends HttpServlet {
 			JSON json;
 
 			if( tipo.contains( "json" ) ){
-				json = new JSON( IOUtils.toString( requisicao.getInputStream(), codificacao ) );
+				json = new JSON( IOUtils.toString( requisicao.getInputStream(), codif ) );
 			}else{
 				json = new JSON();
 			}
@@ -119,7 +120,7 @@ public class UxiAmareloServlet extends HttpServlet {
 			
 			while( parametros.hasMoreElements() ){
 				String chave = parametros.nextElement();
-				String valor = URLDecoder.decode( requisicao.getParameter( chave ), codificacao );
+				String valor = URLDecoder.decode( requisicao.getParameter( chave ), codif );
 				json.put( chave, valor );
 			}
 
@@ -128,63 +129,35 @@ public class UxiAmareloServlet extends HttpServlet {
 				Collection<Part> arquivos = requisicao.getParts();
 				
 				if( ! arquivos.isEmpty() ){
-					
-					File diretorio = new File( uxiAmarelo.getDiretorio() );
-					
-					if( ! diretorio.isAbsolute() ){
-						diretorio = new File(
-							requisicao.getServletContext().getRealPath("") +
-							File.separator +
-							uxiAmarelo.getDiretorio()
-						);
-					}
-					
-					if( ! diretorio.exists() ) diretorio.mkdirs();
-					
-					String diretorioStr = diretorio.getAbsolutePath();
-					
-					String url = uxiAmarelo.getDiretorioURL();
-					
-					if( uxiAmarelo.isDiretorioURLRelativo() ){
-						String url_esquema  = requisicao.getScheme();
-						String url_servidor = requisicao.getServerName();
-						int    url_porta    = requisicao.getServerPort();
-						String url_contexto = requisicao.getContextPath();
-						url =
-								url_esquema + "://" + url_servidor + ":" + url_porta +
-								url_contexto + "/" + url;
-					}
-					
-					if( url.charAt( url.length() - 1 ) == '/' ){
-						url = url.substring( 0, url.length() - 1 );
-					}
+
+					File dirFile = new File( uxiAmarelo.getDiretorioCompleto( requisicao ), "tmp" );
+					if( ! dirFile.exists() ) dirFile.mkdirs();
 					
 					Map<String,List<JSON>> mapa_arquivos = new HashMap<>();
 					
 					for( Part arquivo : arquivos ){
 						
 						String chave = arquivo.getName();
-						String nome_original = getNome( arquivo, codificacao );
+						String nome_original = getNome( arquivo, codif );
 						String nome = nome_original;
 
 						if( nome == null || nome.isEmpty() ){
 							try( InputStream is = arquivo.getInputStream() ){
-								String valor = IOUtils.toString( is, codificacao );
-								valor = URLDecoder.decode( valor, codificacao );
+								String valor = IOUtils.toString( is, codif );
+								valor = URLDecoder.decode( valor, codif );
 								json.put( chave, valor );
 								continue;
 							}
 						}
 
-						if( uxiAmarelo.getArquivoNome().equals( "uuid" ) ){
-							nome = UUID.randomUUID().toString();
+						File arqFile = new File( dirFile, nome );
+
+						while( arqFile.exists() ){
+							nome = UUID.randomUUID().toString() + "~" + nome_original;
+							arqFile = new File( dirFile, nome );
 						}
 						
-						while( new File( diretorioStr + File.separator + nome ).exists() ){
-							nome = UUID.randomUUID().toString();
-						}
-						
-						arquivo.write( diretorioStr + File.separator + nome );
+						arquivo.write( arqFile.getAbsolutePath() );
 						
 						List<JSON> lista = mapa_arquivos.get( chave );
 
@@ -196,7 +169,7 @@ public class UxiAmareloServlet extends HttpServlet {
 						lista.add(
 							(JSON) new JSON()
 							.put( "nome", nome_original )
-							.put( "endereco", url + "/" + nome )
+							.put( "endereco", "/tmp/" + nome )
 						);
 						
 					}
@@ -214,19 +187,6 @@ public class UxiAmareloServlet extends HttpServlet {
 				
 			}
 			
-			String copaiba = (String) json.remove( "copaiba" );
-			if( StringUtil.tamanho( copaiba ) == 0 ){
-				throw new IllegalArgumentException( "copaiba = nome@classe@metodo" );
-			}
-
-			String[] copaibaParam = copaiba.split( "@" );
-			if( copaibaParam.length != 3 ){
-				throw new IllegalArgumentException( "copaiba = nome@classe@metodo" );
-			}
-			
-			String comando = (String) json.remove( "uxicmd" );
-			if( StringUtil.tamanho( comando ) == 0 ) comando = null;
-
 			if( uxiAmarelo.isCookieEnviar() ){
 				Cookie[] cookies = requisicao.getCookies();
 				if( cookies != null ){
@@ -234,11 +194,7 @@ public class UxiAmareloServlet extends HttpServlet {
 						String nome = cookie.getName();
 						if( uxiAmarelo.cookieBloqueado( nome ) ) continue;
 						if( ! json.has( nome ) ){
-							try{
-								json.put( nome, URLDecoder.decode( cookie.getValue(), "UTF-8" ) );
-							}catch( UnsupportedEncodingException e ){
-								json.put( nome, cookie.getValue() );
-							}
+							json.put( nome, URLDecoder.decode( cookie.getValue(), Util.CODIF ) );
 						}
 					}
 				}
@@ -255,19 +211,30 @@ public class UxiAmareloServlet extends HttpServlet {
 					}
 				}
 			}
+
+			String copaiba = (String) json.remove( "copaiba" );
+			if( StringUtil.tamanho( copaiba ) == 0 ){
+				throw new IllegalArgumentException( "copaiba = nome@classe@metodo" );
+			}
+
+			String[] copaibaParam = copaiba.split( "@" );
+			if( copaibaParam.length != 3 ){
+				throw new IllegalArgumentException( "copaiba = nome@classe@metodo" );
+			}
+			
+			String comando = (String) json.remove( "uxicmd" );
+			if( StringUtil.tamanho( comando ) == 0 ) comando = null;
 			
 			String resultado;
-			
-			if( comando == null ){
+
+			if( comando != null && comando.equals( "voltar" ) ){
+				resultado = json.toString();
+				comando   = null;
+			}else{
 				try( CopaibaConexao cc = uxiAmarelo.conectarCopaiba( copaibaParam[0] ) ){
 					resultado = cc.solicitar( copaibaParam[1], json.toString(), copaibaParam[2] );
 					if( resultado == null ) resultado = "";
 				}
-			}else if( comando.equals( "voltar" ) ){
-				resultado = json.toString();
-				comando   = null;
-			}else{
-				resultado = "";
 			}
 			
 			if( comando == null ){
@@ -278,16 +245,28 @@ public class UxiAmareloServlet extends HttpServlet {
 				saida.write( resultado );
 				
 			}else if( comando.startsWith( "redirecionar" ) ){
+
+				if( ! uxiAmarelo.comandoPermitido( "redirecionar" ) ){
+					throw new SecurityException( "redirecionar" );
+				}
 				
 				resposta.sendRedirect( Util.obterStringDeJSON( "redirecionar", comando, resultado ) );
 				
 			}else if( comando.startsWith( "base64" ) ){
+
+				if( ! uxiAmarelo.comandoPermitido( "base64" ) ){
+					throw new SecurityException( "base64" );
+				}
 				
 				String url = comando.substring( "base64.".length() );
 				
-				resposta.sendRedirect( url + Base64.getUrlEncoder().encodeToString( resultado.getBytes( "UTF-8" ) ) );
+				resposta.sendRedirect( url + Base64.getUrlEncoder().encodeToString( resultado.getBytes( Util.CODIF ) ) );
 				
 			}else if( comando.startsWith( "html_url" ) ){
+
+				if( ! uxiAmarelo.comandoPermitido( "html_url" ) ){
+					throw new SecurityException( "html_url" );
+				}
 				
 				HttpURLConnection con = (HttpURLConnection) new URL( Util.obterStringDeJSON( "html_url", comando, resultado ) ).openConnection();
 				con.setRequestProperty( "User-Agent", "Uxi-amarelo" );
@@ -298,12 +277,16 @@ public class UxiAmareloServlet extends HttpServlet {
 				resposta.setContentType( "text/html" );
 				
 				try( InputStream is = con.getInputStream() ){
-					saida.write( IOUtils.toString( is ) );
+					saida.write( IOUtils.toString( is, Util.CODIF ) );
 				}
 				
 				con.disconnect();
 				
 			}else if( comando.startsWith( "html" ) ){
+
+				if( ! uxiAmarelo.comandoPermitido( "html" ) ){
+					throw new SecurityException( "html" );
+				}
 				
 				resposta.setStatus( HttpServletResponse.SC_OK );
 				resposta.setContentType( "text/html" );
@@ -315,14 +298,11 @@ public class UxiAmareloServlet extends HttpServlet {
 				throw new IllegalArgumentException( comando );
 				
 			}
-			
+		
+		}catch( SecurityException e ){
+			enviarErro( e, resposta, HttpServletResponse.SC_FORBIDDEN, saida );
 		}catch( Exception e ){
-			
-			resposta.setStatus( HttpServletResponse.SC_INTERNAL_SERVER_ERROR );
-			resposta.setContentType( "application/json" );
-
-			saida.write( Util.gerarRespostaErro( e ).toString() );
-
+			enviarErro( e, resposta, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, saida );
 		}
 
         saida.flush();
@@ -333,11 +313,17 @@ public class UxiAmareloServlet extends HttpServlet {
 	protected void doGet( HttpServletRequest requisicao, HttpServletResponse resposta ) throws ServletException, IOException {
 		doPost( requisicao, resposta );
 	}
+
+	private static void enviarErro( Throwable e, HttpServletResponse resposta, int status, PrintWriter saida ) {
+		resposta.setStatus( status );
+		resposta.setContentType( "application/json" );
+		saida.write( Util.gerarRespostaErro( e ).toString() );
+	}
 	
 	/**
 	 * @see Part#getSubmittedFileName()
 	 */
-	private static String getNome( Part arquivo, String codificacao ) throws UnsupportedEncodingException {
+	private static String getNome( Part arquivo, Charset codif ) {
 		String nome = null;
 		String content_disposition = arquivo.getHeader( "content-disposition" );
 		if( content_disposition == null ) return null;
@@ -349,7 +335,7 @@ public class UxiAmareloServlet extends HttpServlet {
 			}
 		}
 		if( nome != null ){
-			nome = URLDecoder.decode( nome, codificacao );
+			nome = URLDecoder.decode( nome, codif );
 			char sep = nome.indexOf( '/' ) >= 0 ? '/' : nome.indexOf( '\\' ) >= 0 ? '\\' : '#';
 			if( sep != '#' ){
 				nome = nome.substring( nome.lastIndexOf( sep ) + 1 );

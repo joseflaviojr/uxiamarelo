@@ -43,7 +43,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -63,6 +66,7 @@ import javax.ejb.Startup;
 import javax.ejb.Timeout;
 import javax.ejb.TimerConfig;
 import javax.ejb.TimerService;
+import javax.servlet.http.HttpServletRequest;
 
 import com.google.protobuf.ByteString;
 import com.ibm.etcd.api.KeyValue;
@@ -72,7 +76,6 @@ import com.joseflavio.copaiba.CopaibaConexao;
 import com.joseflavio.copaiba.CopaibaException;
 import com.joseflavio.copaiba.Erro;
 import com.joseflavio.urucum.json.JSON;
-import com.joseflavio.uxiamarelo.util.Util;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -94,11 +97,11 @@ public class UxiAmarelo {
 
 	private String                  copaibas;
 	private Map<String,CopaibaConf> copaibasConf;
+
+	private String autorizacaoCopaiba;
+	private String autorizacaoClasse;
 	
-	private String  diretorio;
-	private String  diretorioURL;
-	private boolean diretorioURLRelativo;
-	private String  arquivoNome;
+	private String diretorio;
 
 	private boolean     cookieEnviar;
 	private String      cookieBloquear;
@@ -107,6 +110,9 @@ public class UxiAmarelo {
 	private boolean encapsulamentoAutomatico;
 	private String  encapsulamentoSeparador;
 
+	private String      comandoPermitir;
+    private Set<String> comandosPermitidos;
+
 	@EJB
 	private Registrador reg;
 
@@ -114,16 +120,19 @@ public class UxiAmarelo {
 	private TimerService timerService;
 
 	private final ReentrantLock lock_atualizacao = new ReentrantLock();
+	private final ReentrantLock lock_limpeza     = new ReentrantLock();
 	
 	@PostConstruct
 	public void inicializar() {
 		TimerConfig tc = new TimerConfig();
 		tc.setPersistent( false );
-		timerService.createIntervalTimer( 0, 5 * 60 * 1000, tc );
+		timerService.createIntervalTimer( 0, 5 * 60 * 1000, tc ); // 5 minutos
 	}
 
 	@Timeout
 	public void atualizar() {
+
+		// Carregando propriedades
 
 		lock_atualizacao.lock();
 		
@@ -152,6 +161,24 @@ public class UxiAmarelo {
 
 		}
 
+		// Apagando arquivos temporários
+
+		lock_limpeza.lock();
+
+		try{
+			
+			limparTemporario();
+
+		}catch( Exception e ){
+
+			reg.getLog().log( Level.SEVERE, e.getMessage(), e );
+
+		}finally{
+
+			lock_limpeza.unlock();
+
+		}
+
 	}
 	
 	private void carregar( InputStream is ) throws IOException {
@@ -170,11 +197,14 @@ public class UxiAmarelo {
 			
 			copaibas = props.getProperty( "copaibas", "" );
 			
-			diretorio            = props.getProperty( "diretorio",     "uxiamarelo" );
-			diretorioURL         = props.getProperty( "diretorio.url", "uxiamarelo" );
-			diretorioURLRelativo = ! Util.isURL( diretorioURL );
-
-			arquivoNome = props.getProperty( "arquivo.nome",  "uuid" );
+			autorizacaoCopaiba = props.getProperty( "autorizacao.copaiba", "" );
+			autorizacaoClasse  = props.getProperty( "autorizacao.classe" , "" );
+			
+			diretorio = props.getProperty( "diretorio", "uxiamarelo" );
+			
+			if( diretorio.endsWith( File.separator ) ){
+				diretorio = diretorio.substring( 0, diretorio.length() - 1 );
+			}
 			
 			cookieEnviar   = Boolean.parseBoolean( props.getProperty( "cookie.enviar", "true" ) );
 			cookieBloquear = props.getProperty( "cookie.bloquear", "sid, sessaoid, sessionid" );
@@ -186,6 +216,13 @@ public class UxiAmarelo {
 			
 			encapsulamentoAutomatico = Boolean.parseBoolean( props.getProperty( "encapsulamento.automatico", "true" ) );
 			encapsulamentoSeparador  = props.getProperty( "encapsulamento.separador", "__" );
+
+			comandoPermitir = props.getProperty( "comando.permitir", "redirecionar, base64" );
+
+			comandosPermitidos = new HashSet<>();
+	        for( String s : comandoPermitir.split( "," ) ){
+                comandosPermitidos.add( s.trim() );
+            }
 			
 		}
 
@@ -240,6 +277,35 @@ public class UxiAmarelo {
 	}
 
 	/**
+	 * {@link Files#delete(Path) Apaga} os {@link File arquivos} temporários,
+	 * subidos através de {@link com.joseflavio.uxiamarelo.servlet.UxiAmareloServlet},
+	 * e que não foram movidos para diretórios de persistência.
+	 * Prazo máximo de permanência do arquivo temporário: 1 hora, em relação
+	 * à sua data de modificação.
+	 */
+	private void limparTemporario() throws IOException {
+
+		final Path tmp = Paths.get( getDiretorio(), "tmp" );
+		if( ! tmp.isAbsolute() || ! Files.exists( tmp ) ) return;
+
+		final Path systmp = Paths.get( System.getProperty( "java.io.tmpdir" ) );
+		if( tmp.equals( systmp ) ) return;
+
+		final long ctm = System.currentTimeMillis();
+
+		try( DirectoryStream<Path> ds = Files.newDirectoryStream(tmp) ) {
+			for( Path p : ds ){
+				if( Files.isDirectory( p ) ) continue;
+				long lmt = Files.getLastModifiedTime( p ).toMillis();
+				if( ( ctm - lmt ) >= ( 1 * 60 * 60 * 1000 ) ){ // 1 hora
+					Files.delete( p );
+				}
+			}
+		}
+
+	}
+
+	/**
 	 * Conecta a uma {@link com.joseflavio.copaiba.Copaiba Copaíba}.
 	 * @param id Identificação da {@link com.joseflavio.copaiba.Copaiba Copaíba} desejada.
 	 * @see CopaibaConexao#CopaibaConexao(String, int, boolean, boolean, boolean)
@@ -263,35 +329,46 @@ public class UxiAmarelo {
 	}
 
 	/**
-	 * Endereço para depósito dos arquivos obtidos por upload.<br>
-	 * Pode ser absoluto local ("/home/user/upload", "/tmp", etc.) ou relativo ao diretório raiz da aplicação web.
+	 * Nome da {@link CopaibaConexao Copaíba} do sistema de controle de acesso a recursos.
 	 */
-	public synchronized String getDiretorio() {
+	public synchronized String getAutorizacaoCopaiba() {
+		return autorizacaoCopaiba;
+	}
+
+	/**
+	 * Nome da classe-serviço do sistema de controle de acesso a recursos.
+	 */
+	public synchronized String getAutorizacaoClasse() {
+		return autorizacaoClasse;
+	}
+
+	/**
+	 * Repositório de arquivos.<br>
+	 * Endereço local completo ("/home/user/upload") ou relativo ao diretório raiz da aplicação web.
+	 */
+	private synchronized String getDiretorio() {
 		return diretorio;
 	}
+
+	/**
+	 * {@link #getDiretorio()} com informação completa de endereço.
+	 */
+	public synchronized String getDiretorioCompleto( HttpServletRequest requisicao ) {
+
+		String dirStr = diretorio;
+
+		if( dirStr.charAt( 0 ) != File.separatorChar ){
+			String real = requisicao.getServletContext().getRealPath("");
+			dirStr =
+				real +
+				( real.charAt( real.length() - 1 ) == File.separatorChar ? "" : File.separatorChar ) +
+				dirStr;
+		}
+
+		return dirStr;
+
+	}
 	
-	/**
-	 * {@link #getDiretorio()} na forma de {@link URL}, para acesso externo.<br>
-	 * Pode ser absoluto prefixado ("http://", "file://", etc.) ou relativo à URL base da aplicação web.
-	 */
-	public synchronized String getDiretorioURL() {
-		return diretorioURL;
-	}
-
-	/**
-	 * O {@link #getDiretorioURL()} é relativo (true) ou consiste num endereço completo (false)?
-	 */
-	public synchronized boolean isDiretorioURLRelativo() {
-		return diretorioURLRelativo;
-	}
-
-	/**
-	 * Padrão do {@link File#getName() nome} dos arquivos obtidos por upload: "uuid" ({@link java.util.UUID}) ou "original" (se possível).
-	 */
-	public synchronized String getArquivoNome() {
-		return arquivoNome;
-	}
-
 	/**
 	 * Habilita o envio dos {@link javax.servlet.http.Cookie Cookies} como membros do {@link JSON}.
 	 */
@@ -318,6 +395,13 @@ public class UxiAmarelo {
 	 */
     public synchronized boolean cookieBloqueado( String nome ) {
         return cookiesBloqueados.contains( nome );
+	}
+
+	/**
+	 * Verifica se um comando (uxicmd) está permitido.
+	 */
+    public synchronized boolean comandoPermitido( String nome ) {
+        return comandosPermitidos.contains( nome );
 	}
 	
 	/**

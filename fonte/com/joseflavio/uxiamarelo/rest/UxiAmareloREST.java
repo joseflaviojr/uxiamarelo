@@ -41,7 +41,6 @@ package com.joseflavio.uxiamarelo.rest;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -82,10 +81,10 @@ public class UxiAmareloREST {
 
 	@EJB
 	private UxiAmarelo uxiAmarelo;
-	
+
 	@GET
 	@Path("teste")
-	@Produces(MediaType.TEXT_PLAIN + "; charset=UTF-8")
+	@Produces(MediaType.TEXT_PLAIN + "; charset=" + Util.CODIF_STR)
     public String teste() {
 		return "Uxi-amarelo";
 	}
@@ -105,7 +104,7 @@ public class UxiAmareloREST {
 			String resultado = (String) cc.executar( linguagem, rotina, null, true );
 			return respostaEXITO( resultado );
 		}catch( Exception e ){
-			return respostaERRO( e );
+			return respostaERRO( e, Status.INTERNAL_SERVER_ERROR );
 		}
     }
 	
@@ -136,7 +135,7 @@ public class UxiAmareloREST {
 			String resultado = (String) cc.obter( variavel, true );
 			return respostaEXITO( resultado );
 		}catch( Exception e ){
-			return respostaERRO( e );
+			return respostaERRO( e, Status.INTERNAL_SERVER_ERROR );
 		}
     }
 	
@@ -174,57 +173,51 @@ public class UxiAmareloREST {
 		return solicitar0( cabecalho, comando, copaiba, classe, metodo, json );
 	}
 
-	private Response solicitar0( HttpHeaders cabecalho, String comando, String copaiba, String classe, String metodo, String json ) {
+	private Response solicitar0( HttpHeaders cabecalho, String comando, String copaiba, String classe, String metodo, String jsonStr ) {
 		
 		try{
 		
-			JSON objeto = null;
+			JSON json = null;
 			
 			if( uxiAmarelo.isCookieEnviar() ){
 				Map<String, Cookie> cookies = cabecalho.getCookies();
 				if( cookies.size() > 0 ){
-					if( objeto == null ) objeto = new JSON( json );
+					if( json == null ) json = new JSON( jsonStr );
 					for( Cookie cookie : cookies.values() ){
 						String nome = cookie.getName();
 						if( uxiAmarelo.cookieBloqueado( nome ) ) continue;
-						if( ! objeto.has( nome ) ){
-							try{
-								objeto.put( nome, URLDecoder.decode( cookie.getValue(), "UTF-8" ) );
-							}catch( UnsupportedEncodingException e ){
-								objeto.put( nome, cookie.getValue() );
-							}
+						if( ! json.has( nome ) ){
+							json.put( nome, URLDecoder.decode( cookie.getValue(), Util.CODIF ) );
 						}
 					}
 				}
 			}
 			
 			if( uxiAmarelo.isEncapsulamentoAutomatico() ){
-				if( objeto == null ) objeto = new JSON( json );
+				if( json == null ) json = new JSON( jsonStr );
 				final String sepstr = uxiAmarelo.getEncapsulamentoSeparador();
 				final char   sep0   = sepstr.charAt(0);
-				for( String chave : new HashSet<>( objeto.keySet() ) ){
+				for( String chave : new HashSet<>( json.keySet() ) ){
 					if( chave.indexOf( sep0 ) == -1 ) continue;
 					String[] caminho = chave.split( sepstr );
 					if( caminho.length > 1 ){
-						Util.encapsular( caminho, objeto.remove( chave ), objeto );
+						Util.encapsular( caminho, json.remove( chave ), json );
 					}
 				}
 			}
 			
-			if( objeto != null ) json = objeto.toString();
+			if( json != null ) jsonStr = json.toString();
 			
 			String resultado;
 			
-			if( comando == null ){
-				try( CopaibaConexao cc = uxiAmarelo.conectarCopaiba( copaiba ) ){
-					resultado = cc.solicitar( classe, json, metodo );
-					if( resultado == null ) resultado = "";
-				}
-			}else if( comando.equals( "voltar" ) ){
-				resultado = json;
+			if( comando != null && comando.equals( "voltar" ) ){
+				resultado = jsonStr;
 				comando   = null;
 			}else{
-				resultado = "";
+				try( CopaibaConexao cc = uxiAmarelo.conectarCopaiba( copaiba ) ){
+					resultado = cc.solicitar( classe, jsonStr, metodo );
+					if( resultado == null ) resultado = "";
+				}
 			}
 			
 			if( comando == null ){
@@ -232,20 +225,32 @@ public class UxiAmareloREST {
 				return respostaEXITO( resultado );
 				
 			}else if( comando.startsWith( "redirecionar" ) ){
+
+				if( ! uxiAmarelo.comandoPermitido( "redirecionar" ) ){
+					throw new SecurityException( "redirecionar" );
+				}
 				
 				return Response
 					.temporaryRedirect( new URI( Util.obterStringDeJSON( "redirecionar", comando, resultado ) ) )
 					.build();
 
 			}else if( comando.startsWith( "base64" ) ){
+
+				if( ! uxiAmarelo.comandoPermitido( "base64" ) ){
+					throw new SecurityException( "base64" );
+				}
 				
 				String url = comando.substring( "base64.".length() );
 				
 				return Response
-					.temporaryRedirect( new URI( url + Base64.getUrlEncoder().encodeToString( resultado.getBytes( "UTF-8" ) ) ) )
+					.temporaryRedirect( new URI( url + Base64.getUrlEncoder().encodeToString( resultado.getBytes( Util.CODIF ) ) ) )
 					.build();
 				
 			}else if( comando.startsWith( "html_url" ) ){
+
+				if( ! uxiAmarelo.comandoPermitido( "html_url" ) ){
+					throw new SecurityException( "html_url" );
+				}
 				
 				HttpURLConnection con = (HttpURLConnection) new URL( Util.obterStringDeJSON( "html_url", comando, resultado ) ).openConnection();
 				con.setRequestProperty( "User-Agent", "Uxi-amarelo" );
@@ -254,22 +259,26 @@ public class UxiAmareloREST {
 				
 				String conteudo = null;
 				try( InputStream is = con.getInputStream() ){
-					conteudo = IOUtils.toString( is );
+					conteudo = IOUtils.toString( is, Util.CODIF );
 				}
 				
 				con.disconnect();
 				
 				return Response
 					.status( Status.OK )
-					.type( MediaType.TEXT_HTML + "; charset=UTF-8" )
+					.type( MediaType.TEXT_HTML + "; charset=" + Util.CODIF_STR )
 					.entity( conteudo )
 					.build();
 				
 			}else if( comando.startsWith( "html" ) ){
+
+				if( ! uxiAmarelo.comandoPermitido( "html" ) ){
+					throw new SecurityException( "html" );
+				}
 				
 				return Response
 					.status( Status.OK )
-					.type( MediaType.TEXT_HTML + "; charset=UTF-8" )
+					.type( MediaType.TEXT_HTML + "; charset=" + Util.CODIF_STR )
 					.entity( Util.obterStringDeJSON( "html", comando, resultado ) )
 					.build();
 				
@@ -278,9 +287,11 @@ public class UxiAmareloREST {
 				throw new IllegalArgumentException( comando );
 				
 			}
-			
+		
+		}catch( SecurityException e ){
+			return respostaERRO( e, Status.FORBIDDEN );
 		}catch( Exception e ){
-			return respostaERRO( e );
+			return respostaERRO( e, Status.INTERNAL_SERVER_ERROR );
 		}
 		
 	}
@@ -288,15 +299,15 @@ public class UxiAmareloREST {
 	private Response respostaEXITO( String resultado ) {
 		return Response
 			.status( Status.OK )
-			.type( MediaType.APPLICATION_JSON + "; charset=UTF-8" )
+			.type( MediaType.APPLICATION_JSON + "; charset=" + Util.CODIF_STR )
 			.entity( resultado )
 			.build();
 	}
 	
-	private Response respostaERRO( Throwable e ) {
+	private Response respostaERRO( Throwable e, Status status ) {
 		return Response
-			.status( Status.INTERNAL_SERVER_ERROR )
-			.type( MediaType.APPLICATION_JSON + "; charset=UTF-8" )
+			.status( status )
+			.type( MediaType.APPLICATION_JSON + "; charset=" + Util.CODIF_STR )
 			.entity( Util.gerarRespostaErro( e ).toString() )
 			.build();
 	}

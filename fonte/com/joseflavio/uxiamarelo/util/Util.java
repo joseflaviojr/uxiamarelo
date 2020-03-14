@@ -39,6 +39,7 @@
 
 package com.joseflavio.uxiamarelo.util;
 
+import java.nio.charset.Charset;
 import java.util.regex.Pattern;
 
 import com.joseflavio.urucum.comunicacao.Mensagem.Tipo;
@@ -51,16 +52,27 @@ import org.json.JSONString;
 import org.json.JSONTokener;
 
 /**
+ * Utilitários.
  * @author José Flávio de Souza Dias Júnior
  */
 public class Util {
 
-	private static final Pattern padrao_url = Pattern.compile( ".{3,5}://.+" );
+	private static final Pattern PADRAO_URL = Pattern.compile( ".{3,5}://.+" );
+
+	/**
+	 * {@link Charset#toString()} padrão da Uxi-amarelo: UTF-8.
+	 */
+	public static final String CODIF_STR = "UTF-8";
+
+	/**
+	 * {@link Charset} padrão da Uxi-amarelo: UTF-8.
+	 */
+	public static final Charset CODIF = Charset.forName( "UTF-8" );
 	
 	/**
 	 * Obtém uma {@link String} de um {@link JSON}, conforme {@code comando}.
-	 * @param prefixo Prefixo do {@code comando}.
-	 * @param comando Comando de obtenção.
+	 * @param prefixo Prefixo/nome do {@code comando}. Exemplos: "redirecionar", "html".
+	 * @param comando Instrução completa do comando.
 	 * @param json {@link JSONObject} ou {@link JSONString}.
 	 */
 	public static String obterStringDeJSON( String prefixo, String comando, String json ) {
@@ -112,7 +124,7 @@ public class Util {
 	}
 
 	public static boolean isURL( String str ) {
-		return padrao_url.matcher( str ).matches();
+		return PADRAO_URL.matcher( str ).matches();
 	}
 	
 	/**
