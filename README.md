@@ -14,13 +14,17 @@ A figura a seguir ilustra o esquema geral do funcionamento da Uxi-amarelo:
 
 ## Versão Atual
 
-1.0-A13
+1.0-A14 (Fase de Nascimento)
 
 Padrão de versionamento: [JFV](http://joseflavio.com/jfv)
 
 ## Instalação
 
-Para implantar a Uxi-amarelo, basta instalar o arquivo [uxiamarelo.war](https://github.com/joseflaviojr/uxiamarelo/releases/download/1.0-A13/uxiamarelo.war) num servidor Web que implemente a especificação JavaEE, como o [Apache TomEE](http://tomee.apache.org/).
+Para implantar a Uxi-amarelo:
+
+* Criar diretório de configuração e indicá-lo por meio da variável de ambiente `UXIAMARELO`.
+* Inserir [uxiamarelo.conf](https://raw.githubusercontent.com/joseflaviojr/uxiamarelo/master/recurso/uxiamarelo.conf) no diretório de configuração.
+* Instalar [uxiamarelo.war](https://github.com/joseflaviojr/uxiamarelo/releases/download/1.0-A14/uxiamarelo.war) num servidor Web que implemente a especificação JavaEE, como o [Apache TomEE](http://tomee.apache.org/).
 
 ### Requisitos para instalação
 
@@ -54,7 +58,7 @@ gradle clean build
 
 ### Português
 
-Direitos Autorais Reservados &copy; 2016-2019 [José Flávio de Souza Dias Júnior](http://joseflavio.com)
+Direitos Autorais Reservados &copy; 2016-2020 [José Flávio de Souza Dias Júnior](http://joseflavio.com)
 
 Este arquivo é parte de Uxi-amarelo - [http://joseflavio.com/uxiamarelo](http://joseflavio.com/uxiamarelo).
 
@@ -73,7 +77,7 @@ junto com Uxi-amarelo. Se não, veja [https://www.gnu.org/licenses/lgpl.html](ht
 
 ### English
 
-Copyright &copy; 2016-2019 [José Flávio de Souza Dias Júnior](http://joseflavio.com)
+Copyright &copy; 2016-2020 [José Flávio de Souza Dias Júnior](http://joseflavio.com)
 
 This file is part of Uxi-amarelo - [http://joseflavio.com/uxiamarelo](http://joseflavio.com/uxiamarelo).
 
