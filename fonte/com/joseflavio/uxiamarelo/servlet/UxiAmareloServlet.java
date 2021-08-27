@@ -269,18 +269,26 @@ public class UxiAmareloServlet extends HttpServlet {
 				}
 				
 				HttpURLConnection con = (HttpURLConnection) new URL( Util.obterStringDeJSON( "html_url", comando, resultado ) ).openConnection();
-				con.setRequestProperty( "User-Agent", "Uxi-amarelo" );
 				
-				if( con.getResponseCode() != HttpServletResponse.SC_OK ) throw new IOException( "HTTP = " + con.getResponseCode() );
-				
-				resposta.setStatus( HttpServletResponse.SC_OK );
-				resposta.setContentType( "text/html" );
-				
-				try( InputStream is = con.getInputStream() ){
-					saida.write( IOUtils.toString( is, Util.CODIF ) );
+				try{
+
+					con.setRequestProperty( "User-Agent", "Uxi-amarelo" );
+					con.setRequestProperty( "Accept-Charset", Util.CODIF_STR );
+					
+					if( con.getResponseCode() != HttpServletResponse.SC_OK ) throw new IOException( "HTTP = " + con.getResponseCode() );
+					
+					resposta.setStatus( HttpServletResponse.SC_OK );
+					resposta.setContentType( "text/html" );
+					
+					try( InputStream is = con.getInputStream() ){
+						saida.write( IOUtils.toString( is, Util.CODIF ) );
+					}
+					
+				}finally{
+
+					if( con != null ) con.disconnect();
+
 				}
-				
-				con.disconnect();
 				
 			}else if( comando.startsWith( "html" ) ){
 

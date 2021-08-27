@@ -253,22 +253,30 @@ public class UxiAmareloREST {
 				}
 				
 				HttpURLConnection con = (HttpURLConnection) new URL( Util.obterStringDeJSON( "html_url", comando, resultado ) ).openConnection();
-				con.setRequestProperty( "User-Agent", "Uxi-amarelo" );
-				
-				if( con.getResponseCode() != HttpServletResponse.SC_OK ) throw new IOException( "HTTP = " + con.getResponseCode() );
-				
-				String conteudo = null;
-				try( InputStream is = con.getInputStream() ){
-					conteudo = IOUtils.toString( is, Util.CODIF );
+
+				try{
+
+					con.setRequestProperty( "User-Agent", "Uxi-amarelo" );
+					con.setRequestProperty( "Accept-Charset", Util.CODIF_STR );
+					
+					if( con.getResponseCode() != HttpServletResponse.SC_OK ) throw new IOException( "HTTP = " + con.getResponseCode() );
+					
+					String conteudo = null;
+					try( InputStream is = con.getInputStream() ){
+						conteudo = IOUtils.toString( is, Util.CODIF );
+					}
+					
+					return Response
+						.status( Status.OK )
+						.type( MediaType.TEXT_HTML + "; charset=" + Util.CODIF_STR )
+						.entity( conteudo )
+						.build();
+
+				}finally{
+
+					if( con != null ) con.disconnect();
+					
 				}
-				
-				con.disconnect();
-				
-				return Response
-					.status( Status.OK )
-					.type( MediaType.TEXT_HTML + "; charset=" + Util.CODIF_STR )
-					.entity( conteudo )
-					.build();
 				
 			}else if( comando.startsWith( "html" ) ){
 
