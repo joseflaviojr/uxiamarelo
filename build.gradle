@@ -1,50 +1,29 @@
 //------------------------------------------------------
 
-apply plugin: "java"
-apply plugin: "eclipse"
-apply plugin: "idea"
+plugins {
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+}
 
 //------------------------------------------------------
 
-String nome = "Uxi-amarelo"
-String descricao = "Fachada Web para Copaíbas."
+String nome      = 'Uxi-amarelo'
+String descricao = 'Fachada Web para Copaíbas.'
 
-group = "com.joseflavio"
-archivesBaseName = "uxiamarelo"
-version = "1.0-A14"
-
-//------------------------------------------------------
-
-[
-
-"biblioteca", // Dependências diretas: *.jar
-"fonte",      // Código fonte: *.java
-"recurso",    // Anexos que serão embutidos no ".jar"
-"projeto",    // Arquivos de projeto: doc, svg, psd, etc.
-"rascunho",   // Arquivos temporários e descartáveis
-"web"         // Arquivos Web: html, css, js
-
-].each { new File(it).mkdirs() }
+group   = 'com.joseflavio'
+version = '1.0-A14'
 
 //------------------------------------------------------
 
-float javaVersao = 1.8
-String codificacao = "UTF-8"
+float  javaVersao  = 1.8
+String codificacao = 'UTF-8'
 
 sourceCompatibility = javaVersao
+targetCompatibility = javaVersao
 
 tasks.withType(JavaCompile) {
     options.encoding = codificacao
-}
-
-tasks.withType(GroovyCompile) {
-    options.encoding = codificacao
-    groovyOptions.encoding = codificacao
-}
-
-sourceSets {
-    main.java.srcDirs = ["fonte"]
-    main.resources.srcDirs = ["recurso"]
 }
 
 //------------------------------------------------------
@@ -53,61 +32,84 @@ repositories {
     mavenCentral()
 }
 
+//------------------------------------------------------
+
 dependencies {
-    compile fileTree(dir:"biblioteca", include:["*.jar"])
-    compile "com.joseflavio:copaiba:1.0-A16"
-    compile("com.ibm.etcd:etcd-java:0.0.14"){
-        exclude group: "io.netty"
+    implementation fileTree(dir:'lib', include:['*.jar'])
+    implementation 'com.joseflavio:copaiba:1.0-A17'
+    implementation('com.ibm.etcd:etcd-java:0.0.18'){
+        exclude group: 'io.netty'
     }
-    compile "org.omnifaces:omnifaces:3.4.1"
-    compile "org.apache.tomee:javaee-api:8.0-3"
-    compile "commons-io:commons-io:2.6"
-    compile "org.apache.commons:commons-lang3:3.9"
+    implementation 'org.omnifaces:omnifaces:3.4.1'
+    compileOnly 'org.apache.tomee:javaee-api:8.0-5'
+    implementation 'commons-io:commons-io:2.8.0'
+    implementation 'org.apache.commons:commons-lang3:3.11'
+    testImplementation 'junit:junit:4.13'
 }
 
 //------------------------------------------------------
 
 jar {
     manifest {
-        attributes "Implementation-Title": nome,
-                   "Implementation-Version": version,
-                   "Class-Path": configurations.compile.collect{ it.getName() }.join(" ")
+        attributes 'Implementation-Title': nome,
+                   'Implementation-Version': archiveVersion,
+                   'Class-Path': configurations.runtimeClasspath.collect{ it.getName() }.join(' ')
     }
 }
 
 //------------------------------------------------------
 
-task warHTML(type: Copy) {
-    into "$buildDir/web"
-    from "$projectDir/web"
+java {
+    withSourcesJar()
+    withJavadocJar()
 }
 
-task warJava(type: Copy, dependsOn: compileJava) {
-    into "$buildDir/web/WEB-INF/classes"
+//------------------------------------------------------
+
+javadoc {
+    if( JavaVersion.current().isJava9Compatible() ){
+        options.addBooleanOption('html5', true)
+    }
+}
+
+//------------------------------------------------------
+
+task copiarDeps(type: Copy) {
+    from configurations.runtimeClasspath
+    into "$buildDir/deps"
+}
+
+//------------------------------------------------------
+
+task warHtml(type: Copy) {
+    from "$projectDir/web"
+    into "$buildDir/web"
+}
+
+task warJava(type: Copy, dependsOn: [compileJava]) {
     from sourceSets.main.output.classesDirs
+    into "$buildDir/web/WEB-INF/classes"
 }
 
 task warRec(type: Copy) {
+    from sourceSets.main.output.resourcesDir
     into "$buildDir/web/WEB-INF/classes"
-    from "$projectDir/recurso"
 }
 
-task warDep(type: Copy) {
+task warDep(type: Copy, dependsOn: [copiarDeps]) {
+    from "$buildDir/deps"
     into "$buildDir/web/WEB-INF/lib"
-    from configurations.runtime
     exclude "groovy*"
-    exclude "javaee-api*"
     exclude "javax.*"
-    exclude "hamcrest*"
+    exclude "jsr*"
     exclude "slf4j*"
-    exclude "junit*"
 }
 
-task war(type: Zip, dependsOn: [warHTML, warJava, warRec, warDep]) {
-    archiveName = archivesBaseName + ".war"
+task war(type: Zip, dependsOn: [warHtml, warJava, warRec, warDep]) {
+    archiveName = rootProject.name + ".war"
     destinationDir = file("$buildDir")
-    into ""
     from "$buildDir/web"
+    into ""
     includeEmptyDirs = true
 }
 
@@ -119,22 +121,22 @@ build.dependsOn dist
 //------------------------------------------------------
 
 task tomcatRemover(type: Delete) {
-    nome = "$System.env.CATALINA_HOME/webapps/" + archivesBaseName + ".war"
+    nome = "$System.env.CATALINA_HOME/webapps/" + rootProject.name + ".war"
     if( file(nome).exists() ){
         delete nome
     }
 }
 
 task tomcat(type: Copy, dependsOn: [tomcatRemover, war]) {
+    from "$buildDir/" + rootProject.name + ".war"
     into "$System.env.CATALINA_HOME/webapps"
-    from "$buildDir/" + archivesBaseName + ".war"
 }
 
 //------------------------------------------------------
 
 eclipse {
     project {
-        name = archivesBaseName
+        name    = rootProject.name
         comment = descricao
     }
     jdt {
@@ -145,8 +147,8 @@ eclipse {
 
 eclipseJdt {
     doLast {
-        file(".settings/org.eclipse.core.resources.prefs").text =
-            "eclipse.preferences.version=1\nencoding/<project>=" + codificacao
+        file('.settings/org.eclipse.core.resources.prefs').text =
+            'eclipse.preferences.version=1\nencoding/<project>=' + codificacao
     }
 }
 
@@ -154,18 +156,16 @@ eclipseJdt {
 
 idea {
     project {
-        vcs = "Git"
+        languageLevel = new org.gradle.plugins.ide.idea.model.IdeaLanguageLevel(javaVersao)
+        jdkName = '' + javaVersao
+        vcs = 'Git'
         ipr {
             withXml {
-                def projeto = it.asNode()
-                def encoding = projeto.component.find { it.@name == "Encoding" }
-                encoding.appendNode("file", [url: "PROJECT", charset: codificacao])
+                def projeto  = it.asNode()
+                def encoding = projeto.component.find { it.@name == 'Encoding' }
+                encoding.appendNode('file', [url: 'PROJECT', charset: codificacao])
             }
         }
-    }
-    module {
-        languageLevel = new org.gradle.plugins.ide.idea.model.IdeaLanguageLevel(javaVersao)
-        jdkName = "" + javaVersao
     }
 }
 
