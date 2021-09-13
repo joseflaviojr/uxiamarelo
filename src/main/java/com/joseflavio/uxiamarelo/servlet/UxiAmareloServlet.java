@@ -93,8 +93,13 @@ public class UxiAmareloServlet extends HttpServlet {
 	@EJB
 	private UxiAmarelo uxiAmarelo;
 
-	@Override
-	protected void doPost( HttpServletRequest requisicao, HttpServletResponse resposta ) throws ServletException, IOException {
+	/**
+	 * Reconhecer requisição recebida por HTTP, ajustá-la e encaminhá-la através de {@link CopaibaConexao} ao
+	 * {@link com.joseflavio.copaiba.Copaiba servidor},
+	 * para apropriado processamento da {@link CopaibaConexao#solicitar(String, String, String) solicitação},
+	 * e repassar resposta ao requisitante original.
+	 */
+	private void processar( HttpServletRequest requisicao, HttpServletResponse resposta ) throws ServletException, IOException {
 		
 		String tipo = requisicao.getContentType();
 		if( tipo == null || tipo.isEmpty() ) tipo = "text/plain";
@@ -316,10 +321,25 @@ public class UxiAmareloServlet extends HttpServlet {
         saida.flush();
 		
 	}
+
+	@Override
+	protected void doPost( HttpServletRequest req, HttpServletResponse resp ) throws ServletException, IOException {
+		processar( req, resp );
+	}
+
+	@Override
+	protected void doPut( HttpServletRequest req, HttpServletResponse resp ) throws ServletException, IOException {
+		processar( req, resp );
+	}
 	
 	@Override
-	protected void doGet( HttpServletRequest requisicao, HttpServletResponse resposta ) throws ServletException, IOException {
-		doPost( requisicao, resposta );
+	protected void doGet( HttpServletRequest req, HttpServletResponse resp ) throws ServletException, IOException {
+		processar( req, resp );
+	}
+
+	@Override
+	protected void doDelete( HttpServletRequest req, HttpServletResponse resp ) throws ServletException, IOException {
+		processar( req, resp );
 	}
 
 	private static void enviarErro( Throwable e, HttpServletResponse resposta, int status, PrintWriter saida ) {
